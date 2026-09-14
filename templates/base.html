@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Attendance System{% endblock %}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+<nav class="navbar">
+    <a href="{{ url_for('index') }}" class="brand">📋 Smart Attendance</a>
+    <div class="nav-links">
+        {% if session.get('user_id') %}
+            {% if session.get('role') == 'professor' %}
+                <a href="{{ url_for('professor_dashboard') }}">Dashboard</a>
+                <a href="{{ url_for('create_session') }}">New Session</a>
+                <a href="{{ url_for('attendance_report') }}">Reports</a>
+            {% else %}
+                <a href="{{ url_for('student_dashboard') }}">Dashboard</a>
+            {% endif %}
+            <span class="nav-user">👤 {{ session.get('full_name') }} ({{ session.get('role') }})</span>
+            <a href="{{ url_for('logout') }}" class="nav-logout">Logout</a>
+        {% else %}
+            <a href="{{ url_for('login') }}">Login</a>
+            <a href="{{ url_for('register') }}">Register</a>
+        {% endif %}
+    </div>
+</nav>
+
+<main class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-wrap">
+                {% for category, message in messages %}
+                    <div class="flash flash-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+</main>
+
+{% block scripts %}{% endblock %}
+
+<footer class="footer">
+    Intelligent Student Attendance Management System &mdash; QR Code + Face Recognition (Diploma Thesis)
+</footer>
+
+</body>
+</html>

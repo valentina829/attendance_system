@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Professor Dashboard{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>Professor Dashboard</h2>
+    <a href="{{ url_for('create_session') }}" class="btn btn-primary">+ New Lecture Session</a>
+</div>
+
+<div class="card">
+    <h3>Your Lecture Sessions</h3>
+    {% if sessions %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Subject</th>
+                <th>Created</th>
+                <th>Status</th>
+                <th>Students Present</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in sessions %}
+            <tr>
+                <td>{{ s.subject }}</td>
+                <td>{{ s.created_at }}</td>
+                <td>
+                    {% if s.is_active %}
+                        <span class="badge badge-active">Active</span>
+                    {% else %}
+                        <span class="badge badge-closed">Closed</span>
+                    {% endif %}
+                </td>
+                <td>{{ s.present_count }}</td>
+                <td class="actions-cell">
+                    <a href="{{ url_for('attendance_report', session_id=s.id) }}" class="btn btn-small btn-secondary">View Report</a>
+                    {% if s.is_active %}
+                    <form method="POST" action="{{ url_for('end_session', session_id=s.id) }}" style="display:inline;">
+                        <button type="submit" class="btn btn-small btn-danger">End Session</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="hint">You haven't created any lecture sessions yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

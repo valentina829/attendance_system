@@ -1,0 +1,255 @@
+/* =========================================================
+   Intelligent Student Attendance Management System — styles
+   Simple, clean, card-based UI.
+   ========================================================= */
+
+:root {
+    --primary: #2f6fed;
+    --primary-dark: #1f4fbf;
+    --secondary: #eef1f7;
+    --text: #1e2430;
+    --muted: #6b7280;
+    --success: #1a8a4a;
+    --success-bg: #e6f6ec;
+    --error: #c0392b;
+    --error-bg: #fdecea;
+    --border: #e1e5ee;
+    --radius: 10px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #f5f7fb;
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ---------------- Navbar ---------------- */
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #fff;
+    padding: 14px 28px;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.brand {
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: var(--primary-dark);
+    text-decoration: none;
+}
+
+.nav-links {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap;
+}
+
+.nav-links a {
+    color: var(--text);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.nav-links a:hover { color: var(--primary); }
+
+.nav-user {
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+.nav-logout {
+    color: var(--error) !important;
+}
+
+/* ---------------- Layout ---------------- */
+.container {
+    max-width: 960px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 24px 20px 60px;
+    flex: 1;
+}
+
+.footer {
+    text-align: center;
+    padding: 16px;
+    color: var(--muted);
+    font-size: 0.8rem;
+    border-top: 1px solid var(--border);
+    background: #fff;
+}
+
+/* ---------------- Cards ---------------- */
+.card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+}
+
+.form-card { max-width: 460px; margin: 30px auto; }
+
+.hero { text-align: center; padding: 48px 32px; }
+.hero h1 { margin-bottom: 6px; font-size: 1.9rem; }
+.subtitle { color: var(--muted); margin-bottom: 24px; }
+.hero-actions { display: flex; gap: 12px; justify-content: center; margin-bottom: 32px; }
+.how-it-works { text-align: left; max-width: 520px; margin: 0 auto; background: var(--secondary); padding: 18px 24px; border-radius: var(--radius); }
+.how-it-works h3 { margin-top: 0; }
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+/* ---------------- Forms ---------------- */
+form label {
+    display: block;
+    margin: 14px 0 6px;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+form input[type=text],
+form input[type=email],
+form input[type=password],
+form select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    background: #fafbfe;
+}
+
+form input:focus, form select:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: #fff;
+}
+
+.inline-form { display: flex; align-items: center; gap: 10px; }
+.inline-form select { width: auto; }
+
+.hidden-block { display: none !important; }
+
+/* ---------------- Buttons ---------------- */
+.btn {
+    display: inline-block;
+    padding: 10px 18px;
+    border-radius: 8px;
+    border: none;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    text-align: center;
+    transition: background 0.15s ease, transform 0.05s ease;
+}
+
+.btn:active { transform: scale(0.98); }
+
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--primary-dark); }
+.btn-primary:disabled { background: #a9bdf0; cursor: not-allowed; }
+
+.btn-secondary { background: var(--secondary); color: var(--text); }
+.btn-secondary:hover { background: #dfe4f0; }
+
+.btn-danger { background: var(--error-bg); color: var(--error); }
+.btn-danger:hover { background: #f7d3cf; }
+
+.btn-small { padding: 6px 12px; font-size: 0.82rem; }
+.full-width { width: 100%; margin-top: 18px; }
+
+/* ---------------- Flash messages ---------------- */
+.flash-wrap { margin-bottom: 18px; }
+.flash {
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+}
+.flash-success { background: var(--success-bg); color: var(--success); }
+.flash-error { background: var(--error-bg); color: var(--error); }
+
+/* ---------------- Tables ---------------- */
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.92rem;
+}
+
+.data-table th, .data-table td {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.data-table th {
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.actions-cell { display: flex; gap: 8px; }
+
+.badge {
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+.badge-active { background: var(--success-bg); color: var(--success); }
+.badge-closed { background: #eee; color: var(--muted); }
+
+/* ---------------- Misc ---------------- */
+.hint { color: var(--muted); font-size: 0.85rem; }
+.switch-link { text-align: center; margin-top: 16px; font-size: 0.9rem; }
+
+/* ---------------- Camera / QR ---------------- */
+.camera-box {
+    background: #000;
+    border-radius: 10px;
+    overflow: hidden;
+    max-width: 360px;
+    margin: 10px 0;
+}
+.camera-box video, .camera-box img {
+    width: 100%;
+    display: block;
+}
+.camera-controls { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+
+#qr-reader {
+    max-width: 360px;
+    margin: 10px 0;
+}
+
+.checkin-step {
+    margin-bottom: 24px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+}
+.checkin-step:last-child { border-bottom: none; margin-bottom: 0; }
+
+.qr-result { text-align: center; }
+.qr-image { max-width: 260px; margin: 14px auto; display: block; border: 8px solid #fff; box-shadow: 0 0 0 1px var(--border); }

@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}New Lecture Session{% endblock %}
+{% block content %}
+<div class="card form-card">
+    <h2>Start a New Lecture Session</h2>
+    <form method="POST" action="{{ url_for('create_session') }}">
+        <label for="subject">Subject / Lecture name</label>
+        <input type="text" id="subject" name="subject" placeholder="e.g. Computer Networks - Lecture 5" required>
+        <button type="submit" class="btn btn-primary full-width">Generate QR Code</button>
+    </form>
+</div>
+
+{% if qr_image %}
+<div class="card qr-result">
+    <h3>QR Code for: {{ subject }}</h3>
+    <p class="hint">Display this on the projector. Students scan it with their phone to check in.</p>
+    <img src="{{ qr_image }}" alt="Session QR Code" class="qr-image">
+    <p class="hint">Session ID: {{ session_id }}</p>
+</div>
+{% endif %}
+{% endblock %}

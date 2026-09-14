@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Welcome{% endblock %}
+{% block content %}
+<div class="hero card">
+    <h1>Intelligent Student Attendance Management System</h1>
+    <p class="subtitle">QR Code check-in, secured with real-time Face Recognition.</p>
+    <div class="hero-actions">
+        <a class="btn btn-primary" href="{{ url_for('login') }}">Login</a>
+        <a class="btn btn-secondary" href="{{ url_for('register') }}">Create an account</a>
+    </div>
+
+    <div class="how-it-works">
+        <h3>How it works</h3>
+        <ol>
+            <li>Professor starts a lecture and generates a unique QR code.</li>
+            <li>Student scans the QR code with their device's camera.</li>
+            <li>Student's live face is captured and matched against their registered photo.</li>
+            <li>If both the QR code and the face match are valid, attendance is marked automatically.</li>
+        </ol>
+    </div>
+</div>
+{% endblock %}

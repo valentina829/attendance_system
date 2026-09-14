@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Register{% endblock %}
+{% block content %}
+<div class="card form-card">
+    <h2>Create an account</h2>
+
+    <form id="register-form" method="POST" action="{{ url_for('register') }}">
+        <label for="full_name">Full name</label>
+        <input type="text" id="full_name" name="full_name" required>
+
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" required>
+
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" required minlength="6">
+
+        <label for="role">I am a</label>
+        <select id="role" name="role" required>
+            <option value="">-- select role --</option>
+            <option value="student">Student</option>
+            <option value="professor">Professor</option>
+        </select>
+
+        <div id="student-fields" class="hidden-block">
+            <label for="student_id">Student ID</label>
+            <input type="text" id="student_id" name="student_id">
+
+            <label>Face photo (required for face recognition check-in)</label>
+            <div class="camera-box">
+                <video id="reg-video" autoplay playsinline></video>
+                <canvas id="reg-canvas" class="hidden-block"></canvas>
+                <img id="reg-preview" class="hidden-block" alt="Captured face preview">
+            </div>
+            <div class="camera-controls">
+                <button type="button" id="start-camera-btn" class="btn btn-secondary">Start Camera</button>
+                <button type="button" id="capture-btn" class="btn btn-primary" disabled>Capture Photo</button>
+                <button type="button" id="retake-btn" class="btn btn-secondary hidden-block">Retake</button>
+            </div>
+            <p id="capture-status" class="hint"></p>
+            <input type="hidden" id="face_image" name="face_image">
+        </div>
+
+        <button type="submit" class="btn btn-primary full-width">Register</button>
+    </form>
+
+    <p class="switch-link">Already have an account? <a href="{{ url_for('login') }}">Login here</a></p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/register.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Student Dashboard{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h2>Student Dashboard</h2>
+</div>
+
+<div class="card">
+    <h3>Check In to a Lecture</h3>
+    <p class="hint">Step 1: Scan the QR code shown by your professor. Step 2: Confirm your identity with your face.</p>
+
+    <div id="checkin-steps">
+        <!-- STEP 1: QR SCAN -->
+        <div id="step-qr" class="checkin-step">
+            <h4>Step 1 &mdash; Scan QR Code</h4>
+            <div id="qr-reader"></div>
+            <button id="start-qr-btn" class="btn btn-primary">Start QR Scanner</button>
+            <p id="qr-status" class="hint"></p>
+        </div>
+
+        <!-- STEP 2: FACE VERIFY (hidden until QR passes) -->
+        <div id="step-face" class="checkin-step hidden-block">
+            <h4>Step 2 &mdash; Confirm Your Face</h4>
+            <div class="camera-box">
+                <video id="face-video" autoplay playsinline></video>
+                <canvas id="face-canvas" class="hidden-block"></canvas>
+            </div>
+            <div class="camera-controls">
+                <button type="button" id="start-face-camera-btn" class="btn btn-secondary">Start Camera</button>
+                <button type="button" id="verify-face-btn" class="btn btn-primary" disabled>Verify &amp; Mark Present</button>
+            </div>
+            <p id="face-status" class="hint"></p>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h3>My Recent Attendance</h3>
+    {% if history %}
+    <table class="data-table">
+        <thead>
+            <tr><th>Subject</th><th>Date &amp; Time</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+            {% for h in history %}
+            <tr>
+                <td>{{ h.subject }}</td>
+                <td>{{ h.marked_at }}</td>
+                <td><span class="badge badge-active">{{ h.status }}</span></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="hint">No attendance records yet.</p>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="{{ url_for('static', filename='js/student.js') }}"></script>
+{% endblock %}
