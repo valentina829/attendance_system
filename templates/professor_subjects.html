@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block title %}My Subjects{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h2>My subjects</h2>
+        <p class="hint">The subjects assigned to you. Start a session to put its QR code on the projector; only the students listed under "Taken by" can check in.</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('projector_board') }}" class="btn btn-secondary">Project all open sessions</a>
+    </div>
+</div>
+
+<div class="card card-flush">
+    {% if subjects %}
+    <div class="table-wrap">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Subject</th>
+                    <th>Taken by</th>
+                    <th class="num">Students</th>
+                    <th class="num">Sessions</th>
+                    <th>Last session</th>
+                    <th class="actions"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in subjects %}
+                <tr>
+                    <td>
+                        <div class="cell-main">{{ s.name }}</div>
+                        <div class="cell-sub">
+                            {{ s.code }}{% if s.semester is not none %} &middot; semester {{ s.semester }}{% endif %}{% if s.ects is not none %} &middot; {{ s.ects }} ECTS{% endif %}
+                        </div>
+                    </td>
+                    <td>
+                        {% for grp in groups.get(s.id, []) %}
+                        <div>{{ grp.program }} &middot; {{ grp.study_year }}{% if grp.specialisation %} &middot; {{ grp.specialisation }}{% endif %}</div>
+                        {% else %}
+                        <span class="badge badge-warning">Nobody yet</span>
+                        {% endfor %}
+                    </td>
+                    <td class="num">{{ s.students }}</td>
+                    <td class="num">{{ s.sessions }}</td>
+                    <td class="nowrap">{{ s.last_session | localtime }}</td>
+                    <td class="actions">
+                        {% if s.open_session %}
+                        <span class="badge badge-success">Open now</span>
+                        <a href="{{ url_for('session_projector', session_id=s.open_session) }}" class="btn btn-small btn-primary">Projector</a>
+                        <a href="{{ url_for('session_qr', session_id=s.open_session) }}" class="btn btn-small btn-secondary">Show QR</a>
+                        {% elif s.is_active %}
+                        <form method="POST" action="{{ url_for('create_session') }}">
+                            {{ ui.csrf() }}
+                            <input type="hidden" name="subject_id" value="{{ s.id }}">
+                            <input type="hidden" name="projector" value="1">
+                            <button type="submit" class="btn btn-small btn-primary">Start &amp; project</button>
+                        </form>
+                        {% else %}
+                        {{ ui.active_badge(s.is_active) }}
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="empty">No subjects are assigned to you yet. Ask an administrator to add you as a professor of your subjects.</p>
+    {% endif %}
+</div>
+{% endblock %}

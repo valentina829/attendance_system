@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block title %}My account{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h2>My account</h2>
+        <p class="hint">Your profile details and password.</p>
+    </div>
+</div>
+
+{% if current_user.must_change_password %}
+<div class="notice">
+    <p><strong>You are using a temporary password.</strong> Choose a new one below before you continue.</p>
+</div>
+{% endif %}
+
+<div class="grid-2">
+    <div class="card">
+        <h3>Profile</h3>
+        {% if current_user.role == 'student' %}
+        <div class="profile-head">
+            {{ ui.profile_photo(current_user) }}
+            <div>
+                <div class="cell-main">{{ current_user.full_name }}</div>
+                <p class="hint">
+                    {% if current_user.face_photo %}This photo confirms your identity at check-in.
+                    {% elif current_user.face_encoding %}Your face is registered, but no photo is stored yet.
+                    {% else %}No face photo yet. You need one to check in.{% endif %}
+                </p>
+                <a href="{{ url_for('enroll_face') }}" class="btn btn-secondary btn-small">{{ 'Change photo' if current_user.face_photo else 'Add photo' }}</a>
+            </div>
+        </div>
+        {% endif %}
+        <form method="POST" action="{{ url_for('account') }}">
+            {{ ui.csrf() }}
+            <input type="hidden" name="action" value="profile">
+
+            <div class="form-row">
+                <div>
+                    <label for="first_name">First name</label>
+                    <input type="text" id="first_name" name="first_name" value="{{ current_user.first_name or '' }}" required maxlength="60" {% if current_user.must_change_password %}disabled{% endif %}>
+                </div>
+                <div>
+                    <label for="last_name">Last name</label>
+                    <input type="text" id="last_name" name="last_name" value="{{ current_user.last_name or '' }}" maxlength="60" {% if current_user.must_change_password %}disabled{% endif %}>
+                </div>
+            </div>
+
+            <label for="email">Email</label>
+            <input type="email" id="email" value="{{ current_user.email }}" disabled>
+
+            <dl class="facts" style="margin-top: 18px;">
+                <dt>Role</dt><dd>{{ ui.role_badge(current_user.role) }}</dd>
+                {% if current_user.role == 'student' %}
+                <dt>Student ID</dt><dd>{{ current_user.student_id or '-' }}</dd>
+                {{ ui.academic_facts(profile) }}
+                <dt>Face photo</dt>
+                <dd>
+                    {% if current_user.face_encoding %}<span class="badge badge-success">Registered</span>
+                    {% else %}<span class="badge badge-warning">Not registered</span>{% endif %}
+                </dd>
+                {% endif %}
+                <dt>Member since</dt><dd>{{ current_user.created_at | localtime('%d %b %Y') }}</dd>
+            </dl>
+            <p class="hint" style="margin-top: 14px;">To change your email{% if current_user.role == 'student' %}, student ID or academic information{% endif %}, contact an administrator.</p>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" {% if current_user.must_change_password %}disabled{% endif %}>Save profile</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="card">
+        <h3>Change password</h3>
+        <form method="POST" action="{{ url_for('account') }}">
+            {{ ui.csrf() }}
+            <input type="hidden" name="action" value="password">
+
+            <label for="current_password">Current password</label>
+            <input type="password" id="current_password" name="current_password" required autocomplete="current-password">
+
+            <label for="new_password">New password</label>
+            <input type="password" id="new_password" name="new_password" required minlength="8" autocomplete="new-password">
+            <p class="hint">At least 8 characters.</p>
+
+            <label for="confirm_password">Confirm new password</label>
+            <input type="password" id="confirm_password" name="confirm_password" required minlength="8" autocomplete="new-password">
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Change password</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

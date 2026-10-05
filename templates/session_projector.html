@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ lecture.subject }} · Projector · Smart Attendance</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="projector">
+
+{# A page of its own (no menu, no footer): it is meant to fill the classroom projector. #}
+<main class="projector-stage" id="projector-stage">
+    {% if qr_image %}
+    <img src="{{ qr_image }}" alt="Session QR code" class="projector-qr" id="projector-qr">
+    {% endif %}
+    <div class="projector-closed {% if qr_image %}hidden-block{% endif %}" id="projector-closed">
+        <h2>This session has ended</h2>
+        <p>Check-in is closed.</p>
+    </div>
+</main>
+
+<aside class="projector-side" id="live-panel" data-status-url="{{ url_for('session_status', session_id=lecture.id) }}">
+    <div class="projector-brand">Smart Attendance</div>
+    <h1>{{ lecture.subject }}</h1>
+    <p class="projector-meta">{{ lecture.professor_name }} &middot; {{ lecture.created_at | localtime('%d %b %Y') }}</p>
+
+    <ol class="projector-steps" id="projector-steps">
+        <li>Scan the code with your phone</li>
+        <li>Log in with your student account</li>
+        <li>Look at the camera to confirm it's you</li>
+    </ol>
+
+    <div class="projector-count">
+        <span id="live-count">-</span><span class="projector-expected" id="live-expected"></span>
+    </div>
+    <p class="projector-count-label"><span class="pulse" id="live-pulse"></span>checked in</p>
+    <ul class="projector-list" id="live-list"></ul>
+
+    <div class="projector-foot">
+        <span class="projector-clock" id="projector-clock"></span>
+        <span class="projector-controls">
+            <button type="button" class="btn btn-small" id="fullscreen-btn">Full screen</button>
+            <a href="{{ url_for('session_qr', session_id=lecture.id) if lecture.is_active else url_for('index') }}" class="btn btn-small" id="exit-link">Exit</a>
+        </span>
+    </div>
+</aside>
+
+<script>
+const livePanel = document.getElementById("live-panel");
+const liveCount = document.getElementById("live-count");
+const liveExpected = document.getElementById("live-expected");
+const liveList = document.getElementById("live-list");
+let sessionOpen = {{ 'true' if qr_image else 'false' }};
+
+// The session was ended (here or on another device): take the QR code
+// down, but stay on this page - the report must not appear on the projector.
+function showClosed() {
+    sessionOpen = false;
+    const qr = document.getElementById("projector-qr");
+    if (qr) qr.remove();
+    document.getElementById("projector-closed").classList.remove("hidden-block");
+    document.getElementById("projector-steps").classList.add("hidden-block");
+    document.getElementById("live-pulse").classList.add("hidden-block");
+    document.getElementById("exit-link").href = "{{ url_for('index') }}";
+}
+
+async function refreshStatus() {
+    try {
+        const res = await fetch(livePanel.dataset.statusUrl);
+        if (!res.ok || res.redirected) return;
+        const data = await res.json();
+
+        liveCount.textContent = data.present_count;
+        liveExpected.textContent = data.expected_count ? " / " + data.expected_count : "";
+        liveList.replaceChildren(...data.recent.map((entry) => {
+            const li = document.createElement("li");
+            const name = document.createElement("span");
+            const time = document.createElement("span");
+            name.textContent = entry.name;
+            time.textContent = entry.time;
+            li.append(name, time);
+            return li;
+        }));
+
+        if (sessionOpen && !data.is_active) showClosed();
+    } catch (err) { /* temporary network problem - try again on the next tick */ }
+}
+
+function tickClock() {
+    document.getElementById("projector-clock").textContent =
+        new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+}
+
+if (!sessionOpen) showClosed();
+refreshStatus();
+setInterval(refreshStatus, 4000);
+tickClock();
+setInterval(tickClock, 10000);
+
+const fullscreenBtn = document.getElementById("fullscreen-btn");
+fullscreenBtn.addEventListener("click", () => {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen().catch(() => {});
+});
+document.addEventListener("fullscreenchange", () => {
+    fullscreenBtn.textContent = document.fullscreenElement ? "Exit full screen" : "Full screen";
+});
+
+// Keep the screen from dimming or sleeping while the code is projected.
+async function keepAwake() {
+    try {
+        if ("wakeLock" in navigator && document.visibilityState === "visible") {
+            await navigator.wakeLock.request("screen");
+        }
+    } catch (err) { /* not allowed or not supported - the page still works */ }
+}
+keepAwake();
+document.addEventListener("visibilitychange", keepAwake);
+</script>
+
+</body>
+</html>

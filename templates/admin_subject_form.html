@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block title %}{{ subject.name if subject else 'Add subject' }}{% endblock %}
+{% block container_class %}container-narrow{% endblock %}
+{% block content %}
+<p class="breadcrumb"><a href="{{ url_for('academic.subjects') }}">&larr; Subjects</a></p>
+
+<div class="page-header">
+    <div>
+        <h2>{{ subject.name if subject else 'Add a subject' }} {% if subject and not subject.is_active %}<span class="badge badge-muted">Inactive</span>{% endif %}</h2>
+        {% if subject %}
+        <p class="hint">{{ subject.code }} &middot; {{ eligible_count }} active student(s) can check in to this subject.</p>
+        {% else %}
+        <p class="hint">After saving you choose which students the subject is for.</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <form method="POST" action="{{ url_for('academic.subject_edit', subject_id=subject.id) if subject else url_for('academic.subject_new') }}">
+        {{ ui.csrf() }}
+        <div class="form-row">
+            <div>
+                <label for="name">Subject name</label>
+                <input type="text" id="name" name="name" value="{{ data['name'] or '' }}" required maxlength="120">
+            </div>
+            <div>
+                <label for="code">Subject code</label>
+                <input type="text" id="code" name="code" value="{{ data['code'] or '' }}" required maxlength="20" placeholder="e.g. CS204">
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div>
+                <label for="semester">Semester <span class="muted">(optional)</span></label>
+                <input type="number" id="semester" name="semester" min="1" max="20" value="{{ data['semester'] if data['semester'] is not none }}">
+            </div>
+            <div>
+                <label for="ects">Credits / ECTS <span class="muted">(optional)</span></label>
+                <input type="number" id="ects" name="ects" min="0" max="60" value="{{ data['ects'] if data['ects'] is not none }}">
+            </div>
+        </div>
+
+        <label for="description">Description <span class="muted">(optional)</span></label>
+        <textarea id="description" name="description" rows="3" maxlength="1000">{{ data['description'] or '' }}</textarea>
+
+        <label>Professors who teach it</label>
+        <p class="hint">Only these professors can start lecture sessions for the subject.</p>
+        <div class="check-list">
+            {% for p in professors %}
+            <label class="check">
+                <input type="checkbox" name="professors" value="{{ p.id }}" {% if p.id in chosen_professors %}checked{% endif %}>
+                {{ p.full_name }}{% if not p.is_active %} <span class="muted">(deactivated)</span>{% endif %}
+            </label>
+            {% else %}
+            <p class="hint">There are no professors yet. <a href="{{ url_for('admin_user_new', role='professor') }}">Add one</a>.</p>
+            {% endfor %}
+        </div>
+
+        <label class="check">
+            <input type="checkbox" name="is_active" value="1" {% if data['is_active'] %}checked{% endif %}>
+            Subject is active (sessions can be started and students can check in)
+        </label>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">{{ 'Save subject' if subject else 'Create subject' }}</button>
+            <a href="{{ url_for('academic.subjects') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+{% if subject %}
+<div class="card card-flush" id="available-for">
+    <div class="card-head">
+        <h3>Available for</h3>
+        <span class="hint">Students in these groups can check in. Add a line per program that shares the subject.</span>
+    </div>
+    {% if assignments %}
+    <div class="table-wrap">
+        <table class="data-table">
+            <thead>
+                <tr><th>Program</th><th>Year of study</th><th>Specialisation</th><th class="num">Students</th><th class="actions"></th></tr>
+            </thead>
+            <tbody>
+                {% for a in assignments %}
+                <tr>
+                    <td>
+                        <div class="cell-main">{{ a.program }}</div>
+                        <div class="cell-sub">{{ a.faculty }}</div>
+                    </td>
+                    <td>{{ a.study_year }}</td>
+                    <td>{{ a.specialisation or 'All students of the year' }}</td>
+                    <td class="num">{{ a.students }}</td>
+                    <td class="actions">
+                        <form method="POST" action="{{ url_for('academic.subject_assignment', subject_id=subject.id) }}" data-confirm="Remove this group? Its students will no longer be able to check in to {{ subject.name }}.">
+                            {{ ui.csrf() }}
+                            <input type="hidden" name="action" value="delete">
+                            <input type="hidden" name="id" value="{{ a.id }}">
+                            <button type="submit" class="btn btn-small btn-danger">Remove</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="empty">Not available to anyone yet. Add a group below.</p>
+    {% endif %}
+    <div class="card-foot">
+        <form method="POST" action="{{ url_for('academic.subject_assignment', subject_id=subject.id) }}">
+            {{ ui.csrf() }}
+            <input type="hidden" name="action" value="add">
+            {{ ui.academic_fields(tree, {}, required=true, specialisation_hint='leave empty for all students of the year') }}
+            <div class="form-actions">
+                <button type="submit" class="btn btn-secondary">Add group</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card card-flush">
+    <div class="card-head">
+        <h3>Individual exceptions</h3>
+        <span class="hint">Set on a student's page (Users &rarr; Edit).</span>
+    </div>
+    {% if overrides %}
+    <div class="table-wrap">
+        <table class="data-table">
+            <tbody>
+                {% for o in overrides %}
+                <tr>
+                    <td>
+                        <div class="cell-main"><a href="{{ url_for('admin_user_edit', user_id=o.student_id) }}#subject-access">{{ o.full_name }}</a></div>
+                        <div class="cell-sub">{{ o.email }}{% if o.reason %} &middot; {{ o.reason }}{% endif %}</div>
+                    </td>
+                    <td class="text-right">{% if o.allowed %}<span class="badge badge-success">Allowed</span>{% else %}<span class="badge badge-danger">Denied</span>{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="empty">No exceptions for this subject.</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h3>Remove the subject</h3>
+    <p class="hint">A subject that already has lecture sessions cannot be deleted, so its attendance history stays intact. Deactivate it instead.</p>
+    <div class="form-actions">
+        <form method="POST" action="{{ url_for('academic.subject_action', subject_id=subject.id) }}">
+            {{ ui.csrf() }}
+            <input type="hidden" name="action" value="toggle">
+            <button type="submit" class="btn btn-secondary">{{ 'Deactivate' if subject.is_active else 'Activate' }}</button>
+        </form>
+        <form method="POST" action="{{ url_for('academic.subject_action', subject_id=subject.id) }}" data-confirm="Delete {{ subject.name }}?">
+            {{ ui.csrf() }}
+            <input type="hidden" name="action" value="delete">
+            <button type="submit" class="btn btn-danger">Delete subject</button>
+        </form>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/academic.js') }}"></script>
+{% endblock %}

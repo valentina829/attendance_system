@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Open sessions · Projector · Smart Attendance</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="board">
+
+{# A page of its own (no menu, no footer): every open session's QR code on one screen. #}
+<header class="board-head">
+    <div>
+        <span class="projector-brand">Smart Attendance</span>
+        <h1>{{ faculty.name if faculty else 'Open lecture sessions' }}</h1>
+    </div>
+    <p class="board-hint">Scan the code of <strong>your</strong> subject</p>
+    <div class="board-tools">
+        <span class="projector-clock" id="projector-clock"></span>
+        <span class="projector-controls">
+            {% if current_user.role == 'admin' and faculties %}
+            <select id="faculty-select" aria-label="Faculty">
+                <option value="{{ url_for('projector_board') }}">All faculties</option>
+                {% for f in faculties %}
+                <option value="{{ url_for('projector_board', faculty=f.id) }}" {% if faculty and faculty.id == f.id %}selected{% endif %}>{{ f.name }}</option>
+                {% endfor %}
+            </select>
+            {% endif %}
+            <button type="button" class="btn btn-small" id="fullscreen-btn">Full screen</button>
+            <a href="{{ url_for('index') }}" class="btn btn-small">Exit</a>
+        </span>
+    </div>
+</header>
+
+<main class="board-grid" id="board" style="--cols: {{ columns }}"
+      data-status-url="{{ url_for('projector_board_status', faculty=faculty.id if faculty else None) }}"
+      data-ids="{{ sessions | map(attribute='id') | join(',') }}">
+    {% for s in sessions %}
+    <section class="board-card" data-session="{{ s.id }}">
+        <h2>{{ s.subject }}</h2>
+        <p class="board-groups">
+            {% for grp in groups.get(s.subject_id, []) %}
+            <span>{{ grp.program }} &middot; {{ grp.study_year }}{% if grp.specialisation %} &middot; {{ grp.specialisation }}{% endif %}</span>
+            {% endfor %}
+        </p>
+        <img src="{{ s.qr_image }}" alt="QR code for {{ s.subject }}" class="board-qr">
+        <p class="board-foot">
+            <span>{{ s.professor_name }}</span>
+            <span><strong class="board-count">{{ s.present_count }}</strong> / <span class="board-expected">{{ s.present_count + s.absent_count }}</span> checked in</span>
+        </p>
+    </section>
+    {% else %}
+    <div class="projector-closed">
+        <h2>No sessions are open right now</h2>
+        <p>Codes appear here as soon as a professor starts a session.</p>
+    </div>
+    {% endfor %}
+</main>
+
+<script>
+const board = document.getElementById("board");
+
+// Update the counts; when a session was opened or closed, reload so the
+// board shows exactly the codes that can be used right now.
+async function refreshBoard() {
+    try {
+        const res = await fetch(board.dataset.statusUrl);
+        if (!res.ok || res.redirected) return;
+        const data = await res.json();
+        if (data.sessions.map((s) => s.id).join(",") !== board.dataset.ids) {
+            window.location.reload();
+            return;
+        }
+        data.sessions.forEach((s) => {
+            const card = board.querySelector('[data-session="' + s.id + '"]');
+            card.querySelector(".board-count").textContent = s.present_count;
+            card.querySelector(".board-expected").textContent = s.expected_count;
+        });
+    } catch (err) { /* temporary network problem - try again on the next tick */ }
+}
+setInterval(refreshBoard, 5000);
+
+function tickClock() {
+    document.getElementById("projector-clock").textContent =
+        new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+}
+tickClock();
+setInterval(tickClock, 10000);
+
+const facultySelect = document.getElementById("faculty-select");
+if (facultySelect) {
+    facultySelect.addEventListener("change", () => { window.location.href = facultySelect.value; });
+}
+
+const fullscreenBtn = document.getElementById("fullscreen-btn");
+fullscreenBtn.addEventListener("click", () => {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen().catch(() => {});
+});
+document.addEventListener("fullscreenchange", () => {
+    fullscreenBtn.textContent = document.fullscreenElement ? "Exit full screen" : "Full screen";
+});
+
+// Keep the screen from dimming or sleeping while the codes are projected.
+async function keepAwake() {
+    try {
+        if ("wakeLock" in navigator && document.visibilityState === "visible") {
+            await navigator.wakeLock.request("screen");
+        }
+    } catch (err) { /* not allowed or not supported - the page still works */ }
+}
+keepAwake();
+document.addEventListener("visibilitychange", keepAwake);
+</script>
+
+</body>
+</html>

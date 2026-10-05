@@ -8,20 +8,21 @@ save a physical file on disk.
 
 import base64
 import io
-import json
 
 import qrcode
 
 
-def generate_qr_base64(session_id: int, token: str) -> str:
+def generate_qr_base64(checkin_url: str) -> str:
     """
-    Encodes {session_id, token} as JSON inside a QR code and returns a
-    base64 data-URL string ready to use as an <img src="...">.
+    Encodes the session's check-in URL (which carries session_id + token)
+    inside a QR code and returns a base64 data-URL string ready to use as
+    an <img src="...">.
 
-    Encoding both fields (not just the token) lets the student's browser
-    quickly look up which session it belongs to without an extra request.
+    Encoding a full URL (rather than raw JSON) means the QR works both
+    with the in-app scanner AND with a phone's normal camera app, which
+    simply opens the link in the browser.
     """
-    payload = json.dumps({"session_id": session_id, "token": token})
+    payload = checkin_url
 
     qr = qrcode.QRCode(
         version=1,

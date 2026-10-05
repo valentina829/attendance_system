@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block title %}Users{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h2>Users</h2>
+        <p class="hint">Add, edit, deactivate or remove professors, students and administrators.</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('admin_user_new', role=role or 'professor') }}" class="btn btn-primary">+ Add user</a>
+    </div>
+</div>
+
+<div class="tabs">
+    <a href="{{ url_for('admin_users', q=q or None, status=status or None) }}" {% if not role %}class="active"{% endif %}>All <span class="count">{{ counts.values() | sum }}</span></a>
+    <a href="{{ url_for('admin_users', role='professor', q=q or None, status=status or None) }}" {% if role == 'professor' %}class="active"{% endif %}>Professors <span class="count">{{ counts.get('professor', 0) }}</span></a>
+    <a href="{{ url_for('admin_users', role='student', q=q or None, status=status or None) }}" {% if role == 'student' %}class="active"{% endif %}>Students <span class="count">{{ counts.get('student', 0) }}</span></a>
+    <a href="{{ url_for('admin_users', role='admin', q=q or None, status=status or None) }}" {% if role == 'admin' %}class="active"{% endif %}>Admins <span class="count">{{ counts.get('admin', 0) }}</span></a>
+</div>
+
+<div class="card">
+    <form method="GET" action="{{ url_for('admin_users') }}" class="filters">
+        {% if role %}<input type="hidden" name="role" value="{{ role }}">{% endif %}
+        <div class="field field-wide">
+            <label for="q">Search</label>
+            <input type="search" id="q" name="q" value="{{ q }}" placeholder="Name, email or student ID">
+        </div>
+        <div class="field">
+            <label for="status">Status</label>
+            <select id="status" name="status">
+                <option value="">Any status</option>
+                <option value="active" {% if status == 'active' %}selected{% endif %}>Active</option>
+                <option value="inactive" {% if status == 'inactive' %}selected{% endif %}>Deactivated</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Search</button>
+        <a href="{{ url_for('admin_users', role=role or None) }}" class="btn btn-secondary">Clear</a>
+    </form>
+</div>
+
+<div class="card card-flush">
+    {% if users %}
+    <div class="table-wrap">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Role</th>
+                    <th>Details</th>
+                    <th>Status</th>
+                    <th>Joined</th>
+                    <th class="actions"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in users %}
+                {% set is_self = u.id == current_user.id %}
+                <tr>
+                    <td>
+                        <div class="cell-main"><a href="{{ url_for('admin_user_edit', user_id=u.id) }}">{{ u.full_name }}</a>{% if is_self %} <span class="muted">(you)</span>{% endif %}</div>
+                        <div class="cell-sub">{{ u.email }}</div>
+                    </td>
+                    <td>{{ ui.role_badge(u.role) }}</td>
+                    <td>
+                        {% if u.role == 'student' %}
+                            <div>ID {{ u.student_id or '-' }} &middot; {{ u.attended_count }} check-in(s)</div>
+                            <div class="cell-sub">
+                                {% if u.program_name %}{{ u.program_name }}, {{ u.year_name }}{% else %}<span class="badge badge-warning">No academic info</span>{% endif %}
+                                {% if not u.face_encoding %}<span class="badge badge-warning">No face photo</span>{% endif %}
+                            </div>
+                        {% elif u.role == 'professor' %}
+                            {{ u.session_count }} session(s)
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if u.is_active %}<span class="badge badge-success">Active</span>{% else %}<span class="badge badge-muted">Deactivated</span>{% endif %}
+                        {% if u.must_change_password %}<div class="cell-sub">temporary password</div>{% endif %}
+                    </td>
+                    <td class="nowrap">{{ u.created_at | localtime('%d %b %Y') }}</td>
+                    <td class="actions">
+                        <a href="{{ url_for('admin_user_edit', user_id=u.id) }}" class="btn btn-small btn-secondary">Edit</a>
+                        {% if not is_self %}
+                        <form method="POST" action="{{ url_for('admin_user_action', user_id=u.id) }}">
+                            {{ ui.csrf() }}
+                            <input type="hidden" name="next" value="{{ request.full_path }}">
+                            <input type="hidden" name="action" value="toggle_active">
+                            <button type="submit" class="btn btn-small btn-secondary">{{ 'Deactivate' if u.is_active else 'Activate' }}</button>
+                        </form>
+                        <form method="POST" action="{{ url_for('admin_user_action', user_id=u.id) }}" data-confirm="Delete {{ u.full_name }}? Their {{ 'attendance records' if u.role == 'student' else 'sessions and the attendance recorded in them' }} will be deleted too. This cannot be undone.">
+                            {{ ui.csrf() }}
+                            <input type="hidden" name="next" value="{{ request.full_path }}">
+                            <input type="hidden" name="action" value="delete">
+                            <button type="submit" class="btn btn-small btn-danger">Delete</button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="empty">No users match this search.</p>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block title %}Reports{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h2>Attendance reports</h2>
+        <p class="hint">
+            {% if current_user.role == 'admin' %}Every lecture session in the system.{% else %}Your lecture sessions.{% endif %}
+        </p>
+        {{ ui.filter_summary(filters) }}
+    </div>
+    <div class="page-actions no-print">
+        <a href="{{ url_for('reports', format='csv', **filters) }}" class="btn btn-secondary">Export CSV</a>
+        <button type="button" class="btn btn-secondary" onclick="window.print()">Print</button>
+    </div>
+</div>
+
+{{ ui.report_tabs('sessions', filters) }}
+{{ ui.report_filters('reports', filters, options) }}
+
+<div class="stats">
+    <div class="stat stat-accent">
+        <div class="stat-label">Sessions</div>
+        <div class="stat-value">{{ summary.sessions }}</div>
+        <div class="stat-note">{{ summary.active }} still open</div>
+    </div>
+    <div class="stat">
+        <div class="stat-label">Check-ins</div>
+        <div class="stat-value">{{ summary.checkins }}</div>
+    </div>
+    <div class="stat">
+        <div class="stat-label">Average attendance</div>
+        <div class="stat-value">{{ summary.rate }}%</div>
+        <div class="stat-note">of eligible students</div>
+    </div>
+</div>
+
+<div class="card card-flush">
+    {% if rows %}
+    <div class="table-wrap">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Subject</th>
+                    {% if current_user.role == 'admin' %}<th>Professor</th>{% endif %}
+                    <th>Date</th>
+                    <th>Status</th>
+                    <th class="num">Present</th>
+                    <th class="num">Absent</th>
+                    <th>Attendance</th>
+                    <th class="actions"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in rows %}
+                <tr>
+                    <td class="cell-main"><a href="{{ url_for('report_session', session_id=r.id) }}">{{ r.subject }}</a></td>
+                    {% if current_user.role == 'admin' %}<td>{{ r.professor_name }}</td>{% endif %}
+                    <td class="nowrap">{{ r.created_at | localtime }}</td>
+                    <td>{{ ui.session_badge(r.is_active) }}</td>
+                    <td class="num">{{ r.present_count }}</td>
+                    <td class="num">{{ r.absent_count }}</td>
+                    <td>{{ ui.meter(r.present_count, r.present_count + r.absent_count) }}</td>
+                    <td class="actions"><a href="{{ url_for('report_session', session_id=r.id) }}" class="btn btn-small btn-secondary">Details</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="empty">No sessions match these filters.</p>
+    {% endif %}
+</div>
+{% endblock %}

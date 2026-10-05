@@ -1,0 +1,149 @@
+{# Reusable template pieces. Import with:
+   {% import "_macros.html" as ui with context %} #}
+
+{# Hidden anti-forgery field: required inside every POST form. #}
+{% macro csrf() %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% endmacro %}
+
+{# Attendance-rate bar, e.g. ui.meter(7, 10) -> 70% #}
+{% macro meter(part, whole) %}
+{% set pct = percent(part, whole) %}
+<div class="meter">
+    <div class="meter-track"><div class="meter-fill {% if pct < 40 %}very-low{% elif pct < 70 %}low{% endif %}" style="width: {{ pct }}%"></div></div>
+    <span class="meter-value">{{ pct }}%</span>
+</div>
+{% endmacro %}
+
+{% macro session_badge(is_active) %}
+{% if is_active %}<span class="badge badge-success">Active</span>{% else %}<span class="badge badge-muted">Closed</span>{% endif %}
+{% endmacro %}
+
+{% macro active_badge(is_active) %}
+{% if is_active %}<span class="badge badge-success">Active</span>{% else %}<span class="badge badge-muted">Inactive</span>{% endif %}
+{% endmacro %}
+
+{# Dependent dropdowns faculty -> program -> year of study / specialisation
+   (filled in by static/js/academic.js from the structure `tree`).
+   `selected` is anything holding program_id / study_year_id / specialisation_id.
+   The page must also load academic.js. #}
+{% macro academic_fields(tree, selected, required=false, specialisation_hint='optional') %}
+<div class="form-row">
+    <div>
+        <label for="faculty_id">Faculty</label>
+        <select id="faculty_id" name="faculty_id" data-selected="{{ selected['faculty_id'] or '' }}" {% if required %}required{% endif %}></select>
+    </div>
+    <div>
+        <label for="program_id">Branch / program</label>
+        <select id="program_id" name="program_id" data-selected="{{ selected['program_id'] or '' }}" {% if required %}required{% endif %}></select>
+    </div>
+</div>
+<div class="form-row">
+    <div>
+        <label for="study_year_id">Year of study</label>
+        <select id="study_year_id" name="study_year_id" data-selected="{{ selected['study_year_id'] or '' }}" {% if required %}required{% endif %}></select>
+    </div>
+    <div id="specialisation-field">
+        <label for="specialisation_id">Specialisation <span class="muted">({{ specialisation_hint }})</span></label>
+        <select id="specialisation_id" name="specialisation_id" data-selected="{{ selected['specialisation_id'] or '' }}"></select>
+    </div>
+</div>
+<script type="application/json" id="academic-data">{{ tree | tojson }}</script>
+{% endmacro %}
+
+{# Read-only summary of a student's academic profile (row from academic.academic_profile). #}
+{% macro academic_facts(profile) %}
+<dt>Faculty</dt><dd>{{ profile.faculty or '-' }}</dd>
+<dt>Program</dt><dd>{{ profile.program or '-' }}</dd>
+<dt>Year of study</dt><dd>{{ profile.study_year or '-' }}</dd>
+{% if profile.specialisation %}<dt>Specialisation</dt><dd>{{ profile.specialisation }}</dd>{% endif %}
+{% endmacro %}
+
+{% macro role_badge(role) %}
+<span class="badge {{ {'admin': 'badge-info', 'professor': 'badge-accent'}.get(role, 'badge-muted') }}">{{ role | capitalize }}</span>
+{% endmacro %}
+
+{% macro attendance_badge(status) %}
+{% if status == 'present' %}<span class="badge badge-success">Present</span>
+{% elif status == 'manual' %}<span class="badge badge-warning" title="Added by hand, not by QR + face check">Present (manual)</span>
+{% else %}<span class="badge badge-danger">Absent</span>{% endif %}
+{% endmacro %}
+
+{# Sessions / Students switch at the top of the report pages (keeps the filters). #}
+{% macro report_tabs(active, filters) %}
+<div class="tabs">
+    <a href="{{ url_for('reports', **filters) }}" {% if active == 'sessions' %}class="active"{% endif %}>By session</a>
+    <a href="{{ url_for('report_students', **filters) }}" {% if active == 'students' %}class="active"{% endif %}>By student</a>
+</div>
+{% endmacro %}
+
+{# Date / subject / professor filter form shared by the report pages. #}
+{% macro report_filters(endpoint, filters, options) %}
+<div class="card no-print">
+    <form method="GET" action="{{ url_for(endpoint) }}" class="filters">
+        <div class="field">
+            <label for="date_from">From</label>
+            <input type="date" id="date_from" name="date_from" value="{{ filters.date_from or '' }}">
+        </div>
+        <div class="field">
+            <label for="date_to">To</label>
+            <input type="date" id="date_to" name="date_to" value="{{ filters.date_to or '' }}">
+        </div>
+        <div class="field">
+            <label for="subject">Subject</label>
+            <select id="subject" name="subject">
+                <option value="">All subjects</option>
+                {% for s in options.subjects %}
+                <option value="{{ s }}" {% if filters.subject == s %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% if options.professors %}
+        <div class="field">
+            <label for="professor_id">Professor</label>
+            <select id="professor_id" name="professor_id">
+                <option value="">All professors</option>
+                {% for p in options.professors %}
+                <option value="{{ p.id }}" {% if filters.professor_id == p.id %}selected{% endif %}>{{ p.full_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
+        <button type="submit" class="btn btn-primary">Apply</button>
+        <a href="{{ url_for(endpoint) }}" class="btn btn-secondary">Clear</a>
+    </form>
+</div>
+{% endmacro %}
+
+{# One-line description of the active filters, shown on printed reports. #}
+{% macro filter_summary(filters) %}
+<p class="print-only muted">
+    Period: {{ filters.date_from or 'beginning' }} to {{ filters.date_to or 'today' }}
+    {% if filters.subject %} &middot; Subject: {{ filters.subject }}{% endif %}
+</p>
+{% endmacro %}
+
+{# A student's profile photo, or their initial when no photo is stored. #}
+{% macro profile_photo(user, small=false) %}
+{% if user.face_photo %}
+<img class="profile-photo {{ 'profile-photo-sm' if small }}" src="{{ url_for('face_photo', user_id=user.id) }}" alt="Photo of {{ user.full_name }}">
+{% else %}
+<span class="profile-photo profile-photo-empty {{ 'profile-photo-sm' if small }}" aria-hidden="true">{{ user.full_name[:1] | upper }}</span>
+{% endif %}
+{% endmacro %}
+
+{# Face photo picker used by registration and the face photo page: take a
+   photo with the webcam or upload one from the device (see register.js). #}
+{% macro face_capture() %}
+<div class="camera-box">
+    <video id="reg-video" autoplay playsinline></video>
+    <canvas id="reg-canvas" class="hidden-block"></canvas>
+    <img id="reg-preview" class="hidden-block" alt="Selected face photo">
+</div>
+<div class="camera-controls">
+    <button type="button" id="start-camera-btn" class="btn btn-secondary">Use camera</button>
+    <button type="button" id="capture-btn" class="btn btn-primary" disabled>Capture photo</button>
+    <button type="button" id="upload-btn" class="btn btn-secondary">Upload a photo</button>
+    <input type="file" id="face-file" accept="image/*" class="hidden-block">
+</div>
+<p id="capture-status" class="status-line muted"></p>
+<input type="hidden" id="face_image" name="face_image">
+{% endmacro %}

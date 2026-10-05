@@ -1,17 +1,25 @@
 {% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
 {% block title %}Login{% endblock %}
 {% block content %}
-<div class="card form-card">
-    <h2>Login</h2>
-    <form method="POST" action="{{ url_for('login') }}">
-        <label for="email">Email</label>
-        <input type="email" id="email" name="email" required>
+<div class="auth">
+    <div class="card">
+        <h2>Log in</h2>
+        <p class="hint">Welcome back. Enter your details to continue.</p>
+        <form method="POST" action="{{ url_for('login') }}">
+            {{ ui.csrf() }}
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" value="{{ email }}" required autofocus autocomplete="username">
 
-        <label for="password">Password</label>
-        <input type="password" id="password" name="password" required>
+            <div class="label-row">
+                <label for="password">Password</label>
+                <a href="{{ url_for('forgot_password') }}">Forgot password?</a>
+            </div>
+            <input type="password" id="password" name="password" required autocomplete="current-password">
 
-        <button type="submit" class="btn btn-primary full-width">Login</button>
-    </form>
-    <p class="switch-link">Don't have an account? <a href="{{ url_for('register') }}">Register here</a></p>
+            <button type="submit" class="btn btn-primary full-width">Log in</button>
+        </form>
+        <p class="switch-link">New student? <a href="{{ url_for('register') }}">Create an account</a></p>
+    </div>
 </div>
 {% endblock %}

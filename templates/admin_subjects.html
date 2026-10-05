@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block title %}Subjects{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h2>Subjects</h2>
+        <p class="hint">Each subject is available to the academic groups listed under "Available for". Only those students can check in to it.</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('academic.subject_new') }}" class="btn btn-primary">+ Add subject</a>
+    </div>
+</div>
+
+<div class="card">
+    <form method="GET" action="{{ url_for('academic.subjects') }}" class="filters">
+        <div class="field field-wide">
+            <label for="q">Search</label>
+            <input type="search" id="q" name="q" value="{{ q }}" placeholder="Name or code">
+        </div>
+        <div class="field">
+            <label for="status">Status</label>
+            <select id="status" name="status">
+                <option value="">Any status</option>
+                <option value="active" {% if status == 'active' %}selected{% endif %}>Active</option>
+                <option value="inactive" {% if status == 'inactive' %}selected{% endif %}>Inactive</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Search</button>
+        <a href="{{ url_for('academic.subjects') }}" class="btn btn-secondary">Clear</a>
+    </form>
+</div>
+
+<div class="card card-flush">
+    {% if subjects %}
+    <div class="table-wrap">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Subject</th>
+                    <th class="num">Semester</th>
+                    <th class="num">ECTS</th>
+                    <th>Available for</th>
+                    <th>Professors</th>
+                    <th>Status</th>
+                    <th class="actions"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in subjects %}
+                <tr>
+                    <td>
+                        <div class="cell-main"><a href="{{ url_for('academic.subject_edit', subject_id=s.id) }}">{{ s.name }}</a></div>
+                        <div class="cell-sub">{{ s.code }} &middot; {{ s.sessions }} session(s)</div>
+                    </td>
+                    <td class="num">{{ s.semester if s.semester is not none else '-' }}</td>
+                    <td class="num">{{ s.ects if s.ects is not none else '-' }}</td>
+                    <td>
+                        {% for grp in groups.get(s.id, []) %}
+                        <div>{{ grp.program }} &middot; {{ grp.study_year }}{% if grp.specialisation %} &middot; {{ grp.specialisation }}{% endif %}</div>
+                        {% else %}
+                        <span class="badge badge-warning">Nobody yet</span>
+                        {% endfor %}
+                    </td>
+                    <td>{{ s.professors or '-' }}</td>
+                    <td>{{ ui.active_badge(s.is_active) }}</td>
+                    <td class="actions">
+                        <a href="{{ url_for('academic.subject_edit', subject_id=s.id) }}" class="btn btn-small btn-secondary">Edit</a>
+                        <form method="POST" action="{{ url_for('academic.subject_action', subject_id=s.id) }}">
+                            {{ ui.csrf() }}
+                            <input type="hidden" name="action" value="toggle">
+                            <button type="submit" class="btn btn-small btn-secondary">{{ 'Deactivate' if s.is_active else 'Activate' }}</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="empty">{% if q or status %}No subjects match this search.{% else %}No subjects yet. Add the first one.{% endif %}</p>
+    {% endif %}
+</div>
+{% endblock %}

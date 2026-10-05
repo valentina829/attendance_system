@@ -1,63 +1,148 @@
 {% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
 {% block title %}Student Dashboard{% endblock %}
 {% block content %}
 <div class="page-header">
-    <h2>Student Dashboard</h2>
-</div>
-
-<div class="card">
-    <h3>Check In to a Lecture</h3>
-    <p class="hint">Step 1: Scan the QR code shown by your professor. Step 2: Confirm your identity with your face.</p>
-
-    <div id="checkin-steps">
-        <!-- STEP 1: QR SCAN -->
-        <div id="step-qr" class="checkin-step">
-            <h4>Step 1 &mdash; Scan QR Code</h4>
-            <div id="qr-reader"></div>
-            <button id="start-qr-btn" class="btn btn-primary">Start QR Scanner</button>
-            <p id="qr-status" class="hint"></p>
-        </div>
-
-        <!-- STEP 2: FACE VERIFY (hidden until QR passes) -->
-        <div id="step-face" class="checkin-step hidden-block">
-            <h4>Step 2 &mdash; Confirm Your Face</h4>
-            <div class="camera-box">
-                <video id="face-video" autoplay playsinline></video>
-                <canvas id="face-canvas" class="hidden-block"></canvas>
-            </div>
-            <div class="camera-controls">
-                <button type="button" id="start-face-camera-btn" class="btn btn-secondary">Start Camera</button>
-                <button type="button" id="verify-face-btn" class="btn btn-primary" disabled>Verify &amp; Mark Present</button>
-            </div>
-            <p id="face-status" class="hint"></p>
+    <div class="profile-head">
+        <a href="{{ url_for('account') }}" title="My account">{{ ui.profile_photo(current_user, small=true) }}</a>
+        <div>
+            <h2>Hello, {{ current_user.full_name }}</h2>
+            <p class="hint">
+                Student ID: {{ current_user.student_id or '-' }}
+                {% if profile.program %}&middot; {{ profile.program }}, {{ profile.study_year }}{% if profile.specialisation %} &middot; {{ profile.specialisation }}{% endif %}{% endif %}
+            </p>
         </div>
     </div>
 </div>
 
-<div class="card">
-    <h3>My Recent Attendance</h3>
-    {% if history %}
-    <table class="data-table">
-        <thead>
-            <tr><th>Subject</th><th>Date &amp; Time</th><th>Status</th></tr>
-        </thead>
-        <tbody>
-            {% for h in history %}
-            <tr>
-                <td>{{ h.subject }}</td>
-                <td>{{ h.marked_at }}</td>
-                <td><span class="badge badge-active">{{ h.status }}</span></td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <p class="hint">No attendance records yet.</p>
-    {% endif %}
+<div class="stats">
+    <div class="stat stat-accent">
+        <div class="stat-label">Lectures attended</div>
+        <div class="stat-value">{{ history | length }}</div>
+        <div class="stat-note">of {{ total_sessions }} held for your subjects</div>
+    </div>
+    <div class="stat">
+        <div class="stat-label">Attendance rate</div>
+        <div class="stat-value">{{ percent(history | length, total_sessions) }}%</div>
+    </div>
+    <div class="stat">
+        <div class="stat-label">Last check-in</div>
+        <div class="stat-value" style="font-size: 1.15rem; margin-top: 12px;">
+            {% if history %}{{ history[0].marked_at | localtime }}{% else %}-{% endif %}
+        </div>
+    </div>
+</div>
+
+{% if not current_user.program_id %}
+<div class="notice">
+    <p><strong>Your academic information is not set yet.</strong> Until an administrator adds your faculty, program and year of study, you cannot check in to any subject.</p>
+</div>
+{% endif %}
+
+{% if not current_user.face_encoding %}
+<div class="notice">
+    <p><strong>You have no face photo yet.</strong> You need one to check in to lectures.</p>
+    <a href="{{ url_for('enroll_face') }}" class="btn btn-primary">Add my face photo</a>
+</div>
+{% endif %}
+
+<div class="grid-main">
+    <div class="card">
+        <h3>Check in to a lecture</h3>
+        <p class="hint">Scan the QR code shown by your professor, then confirm your identity with your face. You can also scan it with your phone's own camera app. You can only check in to your own subjects.</p>
+
+        <div id="checkin-steps">
+            <!-- STEP 1: QR SCAN -->
+            <div id="step-qr" class="checkin-step">
+                <h4><span class="step-num">1</span> Scan the QR code</h4>
+                <div id="qr-reader"></div>
+                <div class="camera-controls">
+                    <button type="button" id="start-qr-btn" class="btn btn-primary" {% if not current_user.face_encoding %}disabled{% endif %}>Start QR scanner</button>
+                    <button type="button" id="qr-photo-btn" class="btn btn-secondary" {% if not current_user.face_encoding %}disabled{% endif %}>Scan from a photo</button>
+                    <input type="file" id="qr-file" accept="image/*" class="hidden-block">
+                </div>
+                <p id="qr-status" class="status-line">{% if pending_subject %}✅ QR verified for '{{ pending_subject }}'. Now confirm your face.{% endif %}</p>
+            </div>
+
+            <!-- STEP 2: FACE VERIFY (hidden until QR passes) -->
+            <div id="step-face" class="checkin-step {% if not pending_subject %}hidden-block{% endif %}">
+                <h4><span class="step-num">2</span> Confirm your face</h4>
+                <div class="camera-box">
+                    <video id="face-video" autoplay playsinline></video>
+                    <canvas id="face-canvas" class="hidden-block"></canvas>
+                </div>
+                <div class="camera-controls">
+                    <button type="button" id="start-face-camera-btn" class="btn btn-secondary">Start camera</button>
+                    <button type="button" id="verify-face-btn" class="btn btn-primary" disabled>Verify &amp; mark present</button>
+                </div>
+                <p id="face-status" class="status-line"></p>
+            </div>
+        </div>
+    </div>
+
+    <div>
+    <div class="card card-flush">
+        <div class="card-head"><h3>My subjects</h3></div>
+        {% if subjects %}
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr><th>Subject</th><th>Attended</th></tr>
+                </thead>
+                <tbody>
+                    {% for s in subjects %}
+                    <tr>
+                        <td>
+                            <div class="cell-main">{{ s.name }}</div>
+                            <div class="cell-sub">{{ s.code }}{% if s.semester %} &middot; semester {{ s.semester }}{% endif %}{% if s.ects %} &middot; {{ s.ects }} ECTS{% endif %}</div>
+                        </td>
+                        <td>
+                            {% if s.held %}{{ ui.meter(s.attended, s.held) }}<div class="cell-sub">{{ s.attended }} of {{ s.held }} lecture(s)</div>
+                            {% else %}<span class="muted">No lectures yet</span>{% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="empty">No subjects are assigned to your program and year yet.</p>
+        {% endif %}
+    </div>
+
+    <div class="card card-flush">
+        <div class="card-head"><h3>My attendance</h3></div>
+        {% if history %}
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr><th>Lecture</th><th>Checked in</th></tr>
+                </thead>
+                <tbody>
+                    {% for h in history %}
+                    <tr>
+                        <td>
+                            <div class="cell-main">{{ h.subject }}</div>
+                            <div class="cell-sub">{{ h.professor_name }}</div>
+                        </td>
+                        <td>
+                            <div class="nowrap">{{ h.marked_at | localtime }}</div>
+                            {% if h.status == 'manual' %}<div class="cell-sub">added by professor</div>{% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="empty">No attendance records yet.</p>
+        {% endif %}
+    </div>
+    </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="{{ url_for('static', filename='js/html5-qrcode.min.js') }}"></script>
 <script src="{{ url_for('static', filename='js/student.js') }}"></script>
 {% endblock %}

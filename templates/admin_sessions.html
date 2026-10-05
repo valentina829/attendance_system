@@ -1,43 +1,26 @@
 {% extends "base.html" %}
 {% import "_macros.html" as ui with context %}
-{% block title %}Professor Dashboard{% endblock %}
+{% block title %}Sessions{% endblock %}
 {% block content %}
 <div class="page-header">
     <div>
-        <h2>Hello, {{ current_user.full_name }}</h2>
-        <p class="hint">Your lecture sessions and their attendance.</p>
+        <h2>Lecture sessions</h2>
+        <p class="hint">Every session created by any professor.</p>
     </div>
     <div class="page-actions">
-        <a href="{{ url_for('projector_board') }}" class="btn btn-secondary">Project all open sessions</a>
-        <a href="{{ url_for('professor_subjects') }}" class="btn btn-secondary">My subjects</a>
+        <a href="{{ url_for('projector_board') }}" class="btn btn-primary">Project all open sessions</a>
         <a href="{{ url_for('reports') }}" class="btn btn-secondary">Reports</a>
-        <a href="{{ url_for('create_session') }}" class="btn btn-primary">+ New lecture session</a>
-    </div>
-</div>
-
-<div class="stats">
-    <div class="stat stat-accent">
-        <div class="stat-label">Sessions held</div>
-        <div class="stat-value">{{ stats.sessions }}</div>
-    </div>
-    <div class="stat">
-        <div class="stat-label">Open right now</div>
-        <div class="stat-value">{{ stats.active }}</div>
-    </div>
-    <div class="stat">
-        <div class="stat-label">Total check-ins</div>
-        <div class="stat-value">{{ stats.checkins }}</div>
     </div>
 </div>
 
 <div class="card card-flush">
-    <div class="card-head"><h3>Your lecture sessions</h3></div>
     {% if sessions %}
     <div class="table-wrap">
         <table class="data-table">
             <thead>
                 <tr>
                     <th>Subject</th>
+                    <th>Professor</th>
                     <th>Created</th>
                     <th>Status</th>
                     <th class="num">Present</th>
@@ -48,13 +31,14 @@
                 {% for s in sessions %}
                 <tr>
                     <td class="cell-main"><a href="{{ url_for('report_session', session_id=s.id) }}">{{ s.subject }}</a></td>
+                    <td>{{ s.professor_name }}</td>
                     <td class="nowrap">{{ s.created_at | localtime }}</td>
                     <td>{{ ui.session_badge(s.is_active) }}</td>
                     <td class="num">{{ s.present_count }}</td>
                     <td class="actions">
                         {% if s.is_active %}
-                        <a href="{{ url_for('session_projector', session_id=s.id) }}" class="btn btn-small btn-primary">Projector</a>
-                        <a href="{{ url_for('session_qr', session_id=s.id) }}" class="btn btn-small btn-secondary">Show QR</a>
+                        <a href="{{ url_for('session_projector', session_id=s.id) }}" class="btn btn-small btn-secondary">Projector</a>
+                        <a href="{{ url_for('session_qr', session_id=s.id) }}" class="btn btn-small btn-secondary">QR</a>
                         {% endif %}
                         <a href="{{ url_for('report_session', session_id=s.id) }}" class="btn btn-small btn-secondary">Report</a>
                         {% if s.is_active %}
@@ -74,7 +58,7 @@
         </table>
     </div>
     {% else %}
-    <p class="empty">You haven't created any lecture sessions yet.</p>
+    <p class="empty">No lecture sessions yet.</p>
     {% endif %}
 </div>
 {% endblock %}

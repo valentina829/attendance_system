@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block title %}QR code - {{ lecture.subject }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h2>{{ lecture.subject }}</h2>
+        <p class="hint">
+            {{ lecture.professor_name }} &middot; started {{ lecture.created_at | localtime }} &middot; session #{{ lecture.id }}
+        </p>
+    </div>
+    <div class="page-actions no-print">
+        <a href="{{ url_for('session_projector', session_id=lecture.id) }}" class="btn btn-primary">Projector view</a>
+        <a href="{{ url_for('report_session', session_id=lecture.id) }}" class="btn btn-secondary">Open report</a>
+        <form method="POST" action="{{ url_for('end_session', session_id=lecture.id) }}" data-confirm="End this session? Students will no longer be able to check in.">
+            {{ ui.csrf() }}
+            <button type="submit" class="btn btn-danger">End session</button>
+        </form>
+    </div>
+</div>
+
+<div class="qr-layout">
+    <div class="card qr-card">
+        <img src="{{ qr_image }}" alt="Session QR code" class="qr-image">
+        <p class="hint">For the classroom, open the <a href="{{ url_for('session_projector', session_id=lecture.id) }}">projector view</a>. Students scan the code with their phone camera, or with the scanner on their dashboard.</p>
+        <p class="checkin-link"><a href="{{ checkin_url }}">{{ checkin_url }}</a></p>
+    </div>
+
+    <div class="card" id="live-panel" data-status-url="{{ url_for('session_status', session_id=lecture.id) }}">
+        <h3><span class="pulse"></span>Checked in so far</h3>
+        <div class="live-count" id="live-count">-</div>
+        <ul class="live-list" id="live-list"></ul>
+        <p class="hint" id="live-empty">Students appear here as they check in.</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Refresh the "checked in so far" panel every few seconds.
+const livePanel = document.getElementById("live-panel");
+const liveCount = document.getElementById("live-count");
+const liveList = document.getElementById("live-list");
+const liveEmpty = document.getElementById("live-empty");
+
+async function refreshStatus() {
+    try {
+        const res = await fetch(livePanel.dataset.statusUrl);
+        if (!res.ok) return;
+        const data = await res.json();
+
+        liveCount.textContent = data.present_count;
+        liveEmpty.classList.toggle("hidden-block", data.present_count > 0);
+        liveList.replaceChildren(...data.recent.map((entry) => {
+            const li = document.createElement("li");
+            const name = document.createElement("span");
+            const time = document.createElement("span");
+            name.textContent = entry.name;
+            time.textContent = entry.time;
+            time.className = "muted";
+            li.append(name, time);
+            return li;
+        }));
+
+        if (!data.is_active) window.location.reload();  // session was ended elsewhere
+    } catch (err) { /* temporary network problem - try again on the next tick */ }
+}
+
+refreshStatus();
+setInterval(refreshStatus, 4000);
+</script>
+{% endblock %}

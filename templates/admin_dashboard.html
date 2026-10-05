@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block title %}Admin Overview{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h2>Overview</h2>
+        <p class="hint">The whole system at a glance.</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('admin_user_new', role='student') }}" class="btn btn-secondary">+ Add student</a>
+        <a href="{{ url_for('admin_user_new', role='professor') }}" class="btn btn-primary">+ Add professor</a>
+    </div>
+</div>
+
+<div class="stats">
+    <div class="stat stat-accent">
+        <div class="stat-label">Students</div>
+        <div class="stat-value">{{ stats.students }}</div>
+        <div class="stat-note"><a href="{{ url_for('admin_users', role='student') }}">Manage students</a></div>
+    </div>
+    <div class="stat">
+        <div class="stat-label">Professors</div>
+        <div class="stat-value">{{ stats.professors }}</div>
+        <div class="stat-note"><a href="{{ url_for('admin_users', role='professor') }}">Manage professors</a></div>
+    </div>
+    <div class="stat">
+        <div class="stat-label">Lecture sessions</div>
+        <div class="stat-value">{{ stats.sessions }}</div>
+        <div class="stat-note">{{ stats.active_sessions }} open right now</div>
+    </div>
+    <div class="stat">
+        <div class="stat-label">Check-ins</div>
+        <div class="stat-value">{{ stats.checkins }}</div>
+        <div class="stat-note">{{ stats.checkins_today }} today</div>
+    </div>
+</div>
+
+{% if not stats.domains or not stats.subjects %}
+<div class="notice">
+    <p>
+        <strong>Finish setting up:</strong>
+        {% if not stats.domains %}add the allowed student email domain (registration is closed until then).{% endif %}
+        {% if not stats.subjects %}Add faculties, programs and subjects so students can check in.{% endif %}
+    </p>
+    <span class="page-actions">
+        {% if not stats.domains %}<a href="{{ url_for('academic.settings') }}" class="btn btn-secondary">Email domains</a>{% endif %}
+        {% if not stats.subjects %}<a href="{{ url_for('academic.structure') }}" class="btn btn-secondary">Academic structure</a>{% endif %}
+    </span>
+</div>
+{% endif %}
+
+{% if stats.no_profile %}
+<div class="notice">
+    <p><strong>{{ stats.no_profile }}</strong> student(s) have no academic information (faculty, program, year) and cannot check in to any subject until it is set.</p>
+    <a href="{{ url_for('admin_users', role='student') }}" class="btn btn-secondary">Review students</a>
+</div>
+{% endif %}
+
+{% if stats.no_face or stats.inactive %}
+<div class="notice">
+    <p>
+        {% if stats.no_face %}<strong>{{ stats.no_face }}</strong> student(s) have no face photo yet and cannot check in until they register one from their dashboard.{% endif %}
+        {% if stats.inactive %}<strong>{{ stats.inactive }}</strong> account(s) are deactivated.{% endif %}
+    </p>
+    <a href="{{ url_for('admin_users') }}" class="btn btn-secondary">Review users</a>
+</div>
+{% endif %}
+
+<div class="grid-main">
+    <div class="card card-flush">
+        <div class="card-head">
+            <h3>Latest sessions</h3>
+            <a href="{{ url_for('admin_sessions') }}" class="btn btn-small btn-secondary">All sessions</a>
+        </div>
+        {% if recent_sessions %}
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr><th>Subject</th><th>Date</th><th>Status</th><th class="num">Present</th></tr>
+                </thead>
+                <tbody>
+                    {% for s in recent_sessions %}
+                    <tr>
+                        <td>
+                            <div class="cell-main"><a href="{{ url_for('report_session', session_id=s.id) }}">{{ s.subject }}</a></div>
+                            <div class="cell-sub">{{ s.professor_name }}</div>
+                        </td>
+                        <td class="nowrap">{{ s.created_at | localtime }}</td>
+                        <td>{{ ui.session_badge(s.is_active) }}</td>
+                        <td class="num">{{ s.present_count }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="empty">No lecture sessions yet.</p>
+        {% endif %}
+    </div>
+
+    <div class="card card-flush">
+        <div class="card-head">
+            <h3>Newest accounts</h3>
+            <a href="{{ url_for('admin_users') }}" class="btn btn-small btn-secondary">All users</a>
+        </div>
+        <div class="table-wrap">
+            <table class="data-table">
+                <tbody>
+                    {% for u in recent_users %}
+                    <tr>
+                        <td>
+                            <div class="cell-main"><a href="{{ url_for('admin_user_edit', user_id=u.id) }}">{{ u.full_name }}</a></div>
+                            <div class="cell-sub">{{ u.created_at | localtime('%d %b %Y') }}</div>
+                        </td>
+                        <td class="text-right">{{ ui.role_badge(u.role) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

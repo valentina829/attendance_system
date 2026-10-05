@@ -17,7 +17,7 @@ import json
 
 import face_recognition
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageOps
 
 # How strict the face match must be. face_recognition returns a "distance"
 # between two face encodings (lower = more similar). 0.6 is the library's
@@ -25,19 +25,28 @@ from PIL import Image
 # chance of a false "present" mark in an attendance system.
 FACE_MATCH_TOLERANCE = 0.5
 
+# Photos are scaled down to this size (longest side, in pixels) before
+# face detection: phone photos are far larger than needed and would make
+# detection slow.
+MAX_IMAGE_SIDE = 1000
+
 
 def decode_base64_image(data_url: str) -> np.ndarray:
     """
     Converts a base64 data-URL (e.g. "data:image/png;base64,AAAA...")
-    coming from the browser's <canvas>.toDataURL() into an RGB numpy
-    array that face_recognition can work with.
+    coming from the browser (webcam capture or an uploaded photo) into
+    an RGB numpy array that face_recognition can work with.
     """
     if "," in data_url:
         # Strip the "data:image/png;base64," header if present
         data_url = data_url.split(",", 1)[1]
 
     image_bytes = base64.b64decode(data_url)
-    image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+    image = Image.open(io.BytesIO(image_bytes))
+    # Phone cameras store portrait photos rotated + an EXIF "orientation"
+    # flag; apply it so the face is upright for the detector.
+    image = ImageOps.exif_transpose(image).convert("RGB")
+    image.thumbnail((MAX_IMAGE_SIDE, MAX_IMAGE_SIDE))
     return np.array(image)
 
 

@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block title %}Reports - Students{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h2>Attendance reports</h2>
+        <p class="hint">How many of the sessions held for their subjects each student attended.</p>
+        {{ ui.filter_summary(filters) }}
+    </div>
+    <div class="page-actions no-print">
+        <a href="{{ url_for('report_students', format='csv', **filters) }}" class="btn btn-secondary">Export CSV</a>
+        <button type="button" class="btn btn-secondary" onclick="window.print()">Print</button>
+    </div>
+</div>
+
+{{ ui.report_tabs('students', filters) }}
+{{ ui.report_filters('report_students', filters, options) }}
+
+<div class="card card-flush">
+    {% if rows %}
+    <div class="table-wrap">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Student</th>
+                    <th>Student ID</th>
+                    <th class="num">Attended</th>
+                    <th class="num">Missed</th>
+                    <th>Attendance</th>
+                    <th>Last check-in</th>
+                    <th class="actions"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in rows %}
+                <tr>
+                    <td>
+                        <div class="cell-main"><a href="{{ url_for('report_student', student_id=r.id, **filters) }}">{{ r.full_name }}</a></div>
+                        <div class="cell-sub">{{ r.email }}{% if not r.is_active %} &middot; deactivated{% endif %}</div>
+                    </td>
+                    <td>{{ r.student_id or '-' }}</td>
+                    <td class="num">{{ r.attended }}</td>
+                    <td class="num">{{ r.expected - r.attended }}</td>
+                    <td>{{ ui.meter(r.attended, r.expected) }}</td>
+                    <td class="nowrap">{{ r.last_seen | localtime }}</td>
+                    <td class="actions"><a href="{{ url_for('report_student', student_id=r.id, **filters) }}" class="btn btn-small btn-secondary">Details</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="empty">No students are expected at the matching sessions.</p>
+    {% endif %}
+</div>
+{% endblock %}

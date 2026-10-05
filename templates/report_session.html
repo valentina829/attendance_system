@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block title %}Report - {{ lecture.subject }}{% endblock %}
+{% block content %}
+{% set total = present | length + absent | length %}
+<p class="breadcrumb no-print"><a href="{{ url_for('reports') }}">&larr; Reports by session</a></p>
+
+<div class="page-header">
+    <div>
+        <h2>{{ lecture.subject }} {{ ui.session_badge(lecture.is_active) }}</h2>
+        <p class="hint">
+            {{ lecture.professor_name }} &middot; {{ lecture.created_at | localtime('%A, %d %B %Y at %H:%M') }} &middot; session #{{ lecture.id }}
+        </p>
+    </div>
+    <div class="page-actions no-print">
+        {% if lecture.is_active %}
+        <a href="{{ url_for('session_qr', session_id=lecture.id) }}" class="btn btn-primary">Show QR</a>
+        {% endif %}
+        <a href="{{ url_for('report_session', session_id=lecture.id, format='csv') }}" class="btn btn-secondary">Export CSV</a>
+        <button type="button" class="btn btn-secondary" onclick="window.print()">Print</button>
+    </div>
+</div>
+
+<div class="stats">
+    <div class="stat stat-accent">
+        <div class="stat-label">Present</div>
+        <div class="stat-value">{{ present | length }}</div>
+        <div class="stat-note">of {{ total }} eligible student(s)</div>
+    </div>
+    <div class="stat">
+        <div class="stat-label">Absent</div>
+        <div class="stat-value">{{ absent | length }}</div>
+    </div>
+    <div class="stat">
+        <div class="stat-label">Attendance rate</div>
+        <div class="stat-value">{{ percent(present | length, total) }}%</div>
+    </div>
+</div>
+
+<div class="card card-flush">
+    <div class="card-head"><h3>Present ({{ present | length }})</h3></div>
+    {% if present %}
+    <div class="table-wrap">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Student</th>
+                    <th>Student ID</th>
+                    <th>Checked in at</th>
+                    <th>Status</th>
+                    <th class="actions"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in present %}
+                <tr>
+                    <td class="muted">{{ loop.index }}</td>
+                    <td>
+                        <div class="cell-main">{{ r.full_name }}</div>
+                        <div class="cell-sub">{{ r.email }}</div>
+                    </td>
+                    <td>{{ r.student_id or '-' }}</td>
+                    <td class="nowrap">{{ r.marked_at | localtime('%H:%M:%S') }}</td>
+                    <td>{{ ui.attendance_badge(r.status) }}</td>
+                    <td class="actions">
+                        <form method="POST" action="{{ url_for('mark_attendance', session_id=lecture.id) }}" data-confirm="Remove the attendance record of {{ r.full_name }}?">
+                            {{ ui.csrf() }}
+                            <input type="hidden" name="student_id" value="{{ r.id }}">
+                            <input type="hidden" name="action" value="remove">
+                            <button type="submit" class="btn btn-small btn-danger">Remove</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="empty">Nobody has checked in to this session.</p>
+    {% endif %}
+</div>
+
+<div class="card card-flush">
+    <div class="card-head">
+        <h3>Absent ({{ absent | length }})</h3>
+        <span class="hint no-print">"Mark present" records a manual entry, shown separately from QR + face check-ins.</span>
+    </div>
+    {% if absent %}
+    <div class="table-wrap">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Student</th>
+                    <th>Student ID</th>
+                    <th class="actions"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in absent %}
+                <tr>
+                    <td class="muted">{{ loop.index }}</td>
+                    <td>
+                        <div class="cell-main">{{ r.full_name }}</div>
+                        <div class="cell-sub">{{ r.email }}</div>
+                    </td>
+                    <td>{{ r.student_id or '-' }}</td>
+                    <td class="actions">
+                        <form method="POST" action="{{ url_for('mark_attendance', session_id=lecture.id) }}">
+                            {{ ui.csrf() }}
+                            <input type="hidden" name="student_id" value="{{ r.id }}">
+                            <input type="hidden" name="action" value="add">
+                            <button type="submit" class="btn btn-small btn-secondary">Mark present</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="empty">Every eligible student attended.</p>
+    {% endif %}
+</div>
+{% endblock %}

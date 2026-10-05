@@ -1,0 +1,9 @@
+# Students' profile photos are personal data: keep them out of the repository.
+instance/faces/
+
+# Database backups written by the automatic upgrades.
+instance/*.bak
+
+# Local Python environment and caches.
+venv/
+__pycache__/

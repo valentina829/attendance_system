@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block title %}Settings{% endblock %}
+{% block container_class %}container-narrow{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h2>Settings</h2>
+        <p class="hint">Who is allowed to register as a student.</p>
+    </div>
+</div>
+
+{% if not domains | selectattr('is_active') | list %}
+<div class="notice">
+    <p><strong>Student registration is closed.</strong> There is no active email domain, so nobody can register. Add or activate one below.</p>
+</div>
+{% endif %}
+
+<div class="card card-flush">
+    <div class="card-head">
+        <h3>Allowed student email domains</h3>
+        <span class="hint">Students can only register with an address from an active domain.</span>
+    </div>
+    {% if domains %}
+    <div class="table-wrap">
+        <table class="data-table">
+            <tbody>
+                {% for d in domains %}
+                <tr>
+                    <td class="cell-main">@{{ d.domain }}</td>
+                    <td>{{ ui.active_badge(d.is_active) }}</td>
+                    <td class="actions">
+                        <form method="POST" action="{{ url_for('academic.domain_action') }}">
+                            {{ ui.csrf() }}
+                            <input type="hidden" name="id" value="{{ d.id }}">
+                            <input type="hidden" name="action" value="toggle">
+                            <button type="submit" class="btn btn-small btn-secondary">{{ 'Disable' if d.is_active else 'Enable' }}</button>
+                        </form>
+                        <form method="POST" action="{{ url_for('academic.domain_action') }}" data-confirm="Remove @{{ d.domain }}? New students will no longer be able to register with it.">
+                            {{ ui.csrf() }}
+                            <input type="hidden" name="id" value="{{ d.id }}">
+                            <input type="hidden" name="action" value="delete">
+                            <button type="submit" class="btn btn-small btn-danger">Remove</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="empty">No domains yet.</p>
+    {% endif %}
+    <div class="card-foot">
+        <form method="POST" action="{{ url_for('academic.domain_action') }}" class="inline-form">
+            {{ ui.csrf() }}
+            <input type="hidden" name="action" value="add">
+            <input type="text" name="domain" placeholder="e.g. ubt-uni.net" required maxlength="100" aria-label="Email domain">
+            <button type="submit" class="btn btn-primary">Add domain</button>
+        </form>
+    </div>
+</div>
+
+<p class="hint">This applies to students who register themselves. Accounts you create under Users can use any address, and existing accounts are not affected.</p>
+{% endblock %}

@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block title %}{{ program.name }}{% endblock %}
+{% block content %}
+<p class="breadcrumb"><a href="{{ url_for('academic.structure') }}">&larr; Academic structure</a></p>
+
+<div class="page-header">
+    <div>
+        <h2>{{ program.name }} {% if not program.is_active %}<span class="badge badge-muted">Inactive</span>{% endif %}</h2>
+        <p class="hint">{{ student_count }} student(s) in this program.</p>
+    </div>
+</div>
+
+<div class="grid-2">
+    <div class="card">
+        <h3>Program</h3>
+        <form method="POST" action="{{ url_for('academic.program', program_id=program.id) }}">
+            {{ ui.csrf() }}
+            <label for="name">Name</label>
+            <input type="text" id="name" name="name" value="{{ program.name }}" required maxlength="120">
+
+            <label for="faculty_id">Faculty</label>
+            <select id="faculty_id" name="faculty_id" required>
+                {% for f in faculties %}
+                <option value="{{ f.id }}" {% if f.id == program.faculty_id %}selected{% endif %}>{{ f.name }}{% if not f.is_active %} (inactive){% endif %}</option>
+                {% endfor %}
+            </select>
+
+            <label>Years of study this program offers</label>
+            <div class="check-list">
+                {% for y in years %}
+                <label class="check">
+                    <input type="checkbox" name="years" value="{{ y.id }}" {% if y.offered %}checked{% endif %}>
+                    {{ y.name }}{% if not y.is_active %} <span class="muted">(inactive)</span>{% endif %}
+                </label>
+                {% else %}
+                <p class="hint">No years of study exist yet. Add them on the Academic structure page.</p>
+                {% endfor %}
+            </div>
+
+            <label class="check">
+                <input type="checkbox" name="is_active" value="1" {% if program.is_active %}checked{% endif %}>
+                Program is active (students can choose it)
+            </label>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Save program</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="card card-flush">
+        <div class="card-head">
+            <h3>Specialisations</h3>
+            <span class="hint">Optional. Leave empty if the program has none.</span>
+        </div>
+        {% if specialisations %}
+        <div class="table-wrap">
+            <table class="data-table">
+                <tbody>
+                    {% for sp in specialisations %}
+                    <tr>
+                        <td>
+                            <div class="cell-main">{{ sp.name }} {% if not sp.is_active %}<span class="badge badge-muted">Inactive</span>{% endif %}</div>
+                            <div class="cell-sub">{{ sp.students }} student(s)</div>
+                        </td>
+                        <td class="actions">
+                            <form method="POST" action="{{ url_for('academic.specialisation_action', program_id=program.id) }}" data-prompt="New name for this specialisation" data-value="{{ sp.name }}">
+                                {{ ui.csrf() }}
+                                <input type="hidden" name="id" value="{{ sp.id }}">
+                                <input type="hidden" name="action" value="rename">
+                                <input type="hidden" name="name">
+                                <button type="submit" class="btn btn-small btn-secondary">Rename</button>
+                            </form>
+                            <form method="POST" action="{{ url_for('academic.specialisation_action', program_id=program.id) }}">
+                                {{ ui.csrf() }}
+                                <input type="hidden" name="id" value="{{ sp.id }}">
+                                <input type="hidden" name="action" value="toggle">
+                                <button type="submit" class="btn btn-small btn-secondary">{{ 'Deactivate' if sp.is_active else 'Activate' }}</button>
+                            </form>
+                            <form method="POST" action="{{ url_for('academic.specialisation_action', program_id=program.id) }}" data-confirm="Delete the specialisation '{{ sp.name }}'?">
+                                {{ ui.csrf() }}
+                                <input type="hidden" name="id" value="{{ sp.id }}">
+                                <input type="hidden" name="action" value="delete">
+                                <button type="submit" class="btn btn-small btn-danger">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="empty">No specialisations.</p>
+        {% endif %}
+        <div class="card-foot">
+            <form method="POST" action="{{ url_for('academic.specialisation_action', program_id=program.id) }}" class="inline-form">
+                {{ ui.csrf() }}
+                <input type="hidden" name="action" value="add">
+                <input type="text" name="name" placeholder="e.g. Software Engineering" required maxlength="120" aria-label="Specialisation name">
+                <button type="submit" class="btn btn-secondary">Add</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="card card-flush">
+    <div class="card-head">
+        <h3>Subjects of this program</h3>
+        <a href="{{ url_for('academic.subjects') }}" class="btn btn-small btn-secondary">All subjects</a>
+    </div>
+    {% if assignments %}
+    <div class="table-wrap">
+        <table class="data-table">
+            <thead>
+                <tr><th>Subject</th><th>Year of study</th><th>For</th></tr>
+            </thead>
+            <tbody>
+                {% for a in assignments %}
+                <tr>
+                    <td>
+                        <div class="cell-main"><a href="{{ url_for('academic.subject_edit', subject_id=a.id) }}">{{ a.name }}</a> {% if not a.is_active %}<span class="badge badge-muted">Inactive</span>{% endif %}</div>
+                        <div class="cell-sub">{{ a.code }}</div>
+                    </td>
+                    <td>{{ a.study_year }}</td>
+                    <td>{{ a.specialisation or 'All students of the year' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="empty">No subjects are assigned to this program yet. Assign them from a subject's page.</p>
+    {% endif %}
+</div>
+{% endblock %}

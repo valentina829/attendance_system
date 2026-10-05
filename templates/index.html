@@ -1,22 +1,35 @@
 {% extends "base.html" %}
 {% block title %}Welcome{% endblock %}
 {% block content %}
-<div class="hero card">
-    <h1>Intelligent Student Attendance Management System</h1>
-    <p class="subtitle">QR Code check-in, secured with real-time Face Recognition.</p>
+<section class="hero">
+    <h1>Attendance that takes seconds, and can't be faked.</h1>
+    <p>Students scan the lecture's QR code and confirm who they are with a live face check. Attendance is recorded only when both match.</p>
     <div class="hero-actions">
-        <a class="btn btn-primary" href="{{ url_for('login') }}">Login</a>
-        <a class="btn btn-secondary" href="{{ url_for('register') }}">Create an account</a>
+        <a class="btn btn-primary" href="{{ url_for('login') }}">Log in</a>
+        <a class="btn btn-secondary" href="{{ url_for('register') }}">Register as a student</a>
     </div>
+</section>
 
-    <div class="how-it-works">
-        <h3>How it works</h3>
-        <ol>
-            <li>Professor starts a lecture and generates a unique QR code.</li>
-            <li>Student scans the QR code with their device's camera.</li>
-            <li>Student's live face is captured and matched against their registered photo.</li>
-            <li>If both the QR code and the face match are valid, attendance is marked automatically.</li>
-        </ol>
+<section class="features">
+    <div class="card feature">
+        <div class="step-num">1</div>
+        <h3>Professor opens a session</h3>
+        <p>Each lecture gets its own QR code, shown on the projector.</p>
     </div>
-</div>
+    <div class="card feature">
+        <div class="step-num">2</div>
+        <h3>Student scans the code</h3>
+        <p>With the phone camera or the scanner on the student dashboard.</p>
+    </div>
+    <div class="card feature">
+        <div class="step-num">3</div>
+        <h3>Face is verified</h3>
+        <p>A live photo is matched against the one captured at registration.</p>
+    </div>
+    <div class="card feature">
+        <div class="step-num">4</div>
+        <h3>Attendance is recorded</h3>
+        <p>Professors and administrators get reports they can filter, print and export.</p>
+    </div>
+</section>
 {% endblock %}

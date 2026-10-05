@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block title %}Report - {{ student.full_name }}{% endblock %}
+{% block content %}
+<p class="breadcrumb no-print"><a href="{{ url_for('report_students', **filters) }}">&larr; Reports by student</a></p>
+
+<div class="page-header">
+    <div>
+        <h2>{{ student.full_name }}</h2>
+        <p class="hint">Student ID {{ student.student_id or '-' }} &middot; {{ student.email }}</p>
+        {{ ui.filter_summary(filters) }}
+    </div>
+    <div class="page-actions no-print">
+        <a href="{{ url_for('report_student', student_id=student.id, format='csv', **filters) }}" class="btn btn-secondary">Export CSV</a>
+        <button type="button" class="btn btn-secondary" onclick="window.print()">Print</button>
+    </div>
+</div>
+
+<div class="stats">
+    <div class="stat stat-accent">
+        <div class="stat-label">Attended</div>
+        <div class="stat-value">{{ attended }}</div>
+        <div class="stat-note">of {{ rows | length }} session(s)</div>
+    </div>
+    <div class="stat">
+        <div class="stat-label">Missed</div>
+        <div class="stat-value">{{ rows | length - attended }}</div>
+    </div>
+    <div class="stat">
+        <div class="stat-label">Attendance rate</div>
+        <div class="stat-value">{{ percent(attended, rows | length) }}%</div>
+    </div>
+</div>
+
+<div class="card card-flush">
+    {% if rows %}
+    <div class="table-wrap">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Subject</th>
+                    <th>Professor</th>
+                    <th>Session date</th>
+                    <th>Status</th>
+                    <th>Checked in at</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in rows %}
+                <tr>
+                    <td class="cell-main">{{ r.subject }}</td>
+                    <td>{{ r.professor_name }}</td>
+                    <td class="nowrap">{{ r.created_at | localtime }}</td>
+                    <td>{{ ui.attendance_badge(r.status) }}</td>
+                    <td class="nowrap">{{ r.marked_at | localtime('%H:%M:%S') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="empty">No sessions match these filters.</p>
+    {% endif %}
+</div>
+{% endblock %}

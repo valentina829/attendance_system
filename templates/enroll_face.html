@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% set replacing = current_user.face_encoding is not none %}
+{% block title %}Face photo{% endblock %}
+{% block container_class %}container-narrow{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h2>{{ 'Change your face photo' if replacing else 'Add your face photo' }}</h2>
+        <p class="hint">One clear photo is needed to confirm it's really you when you check in to lectures.</p>
+    </div>
+</div>
+
+<div class="card">
+    {% if replacing %}
+    <div class="profile-head">
+        {{ ui.profile_photo(current_user) }}
+        <div>
+            <div class="cell-main">Current photo</div>
+            <p class="hint">The new photo replaces it and is used for your next check-ins.</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <p>Take a photo with the camera or upload one from your device. Face the camera directly, with good lighting and nobody else in the picture.</p>
+    <form id="face-form" method="POST" action="{{ url_for('enroll_face') }}">
+        {{ ui.csrf() }}
+        {{ ui.face_capture() }}
+
+        {% if replacing %}
+        <label for="current_password">Your password</label>
+        <input type="password" id="current_password" name="current_password" required autocomplete="current-password">
+        <p class="hint">Needed to replace an existing face photo.</p>
+        {% endif %}
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Save face photo</button>
+            <a href="{{ url_for('account' if replacing else 'student_dashboard') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/register.js') }}"></script>
+{% endblock %}

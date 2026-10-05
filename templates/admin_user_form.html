@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block title %}{{ 'Edit user' if user else 'Add user' }}{% endblock %}
+{% block container_class %}container-narrow{% endblock %}
+{% block content %}
+{% set is_self = user and user.id == current_user.id %}
+<p class="breadcrumb"><a href="{{ url_for('admin_users') }}">&larr; Users</a></p>
+
+<div class="page-header">
+    <div>
+        <h2>{{ 'Edit ' ~ user.full_name if user else 'Add a user' }}</h2>
+        {% if not user %}
+        <p class="hint">The account gets a temporary password that the user must change at first login.</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <form method="POST" action="{{ url_for('admin_user_edit', user_id=user.id) if user else url_for('admin_user_new') }}">
+        {{ ui.csrf() }}
+
+        <div class="form-row">
+            <div>
+                <label for="first_name">First name</label>
+                <input type="text" id="first_name" name="first_name" value="{{ data['first_name'] or '' }}" required maxlength="60">
+            </div>
+            <div>
+                <label for="last_name">Last name</label>
+                <input type="text" id="last_name" name="last_name" value="{{ data['last_name'] or '' }}" maxlength="60">
+            </div>
+        </div>
+
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" value="{{ data['email'] or '' }}" required>
+
+        <div class="form-row">
+            <div>
+                <label for="role">Role</label>
+                {% if is_self %}
+                <input type="hidden" name="role" value="admin">
+                <select id="role" disabled><option>Admin</option></select>
+                {% else %}
+                <select id="role" name="role" required>
+                    {% for value in ('professor', 'student', 'admin') %}
+                    <option value="{{ value }}" {% if data['role'] == value %}selected{% endif %}>{{ value | capitalize }}</option>
+                    {% endfor %}
+                </select>
+                {% endif %}
+            </div>
+            <div class="student-only">
+                <label for="student_id">Student ID</label>
+                <input type="text" id="student_id" name="student_id" value="{{ data['student_id'] or '' }}">
+            </div>
+        </div>
+
+        <div class="student-only form-section">
+            <h4>Academic information</h4>
+            <p class="hint">Decides which subjects the student can check in to. Changes apply immediately.</p>
+            {{ ui.academic_fields(tree, data) }}
+        </div>
+
+        {% if user %}
+            {% if is_self %}
+            <input type="hidden" name="is_active" value="1">
+            <p class="hint">You cannot change your own role or deactivate your own account.</p>
+            {% else %}
+            <label class="check">
+                <input type="checkbox" name="is_active" value="1" {% if user.is_active %}checked{% endif %}>
+                Account is active (can log in)
+            </label>
+            {% endif %}
+        {% else %}
+            <label for="password">Temporary password <span class="muted">(optional)</span></label>
+            <input type="text" id="password" name="password" minlength="8" autocomplete="off" placeholder="Leave empty to generate one">
+            <p class="hint">Shown to you once after saving, so you can pass it on. Students add their face photo themselves after logging in.</p>
+        {% endif %}
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">{{ 'Save changes' if user else 'Create account' }}</button>
+            <a href="{{ url_for('admin_users') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+{% if user and user.role == 'student' %}
+<div class="card card-flush" id="subject-access">
+    <div class="card-head">
+        <h3>Subject access</h3>
+        <span class="hint">Worked out from the academic information above, plus any exceptions.</span>
+    </div>
+    {% if not user.program_id %}
+    <p class="empty">This student has no academic information yet, so they cannot check in to any subject. Set it above.</p>
+    {% elif eligible %}
+    <div class="table-wrap">
+        <table class="data-table">
+            <thead>
+                <tr><th>Can check in to</th><th class="num">Attended</th><th>Because of</th></tr>
+            </thead>
+            <tbody>
+                {% for s in eligible %}
+                <tr>
+                    <td>
+                        <div class="cell-main">{{ s.name }} {% if not s.is_active %}<span class="badge badge-muted">Inactive</span>{% endif %}</div>
+                        <div class="cell-sub">{{ s.code }}</div>
+                    </td>
+                    <td class="num">{{ s.attended }} / {{ s.held }}</td>
+                    <td>{% if s.override %}<span class="badge badge-info">Exception</span>{% else %}Academic profile{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="empty">No subjects are assigned to this student's program and year yet.</p>
+    {% endif %}
+
+    <div class="card-head card-head-sub">
+        <h3>Exceptions</h3>
+        <span class="hint">Allow or deny a single subject without changing the student's profile.</span>
+    </div>
+    {% if overrides %}
+    <div class="table-wrap">
+        <table class="data-table">
+            <tbody>
+                {% for o in overrides %}
+                <tr>
+                    <td>
+                        <div class="cell-main">{{ o.name }} <span class="muted">({{ o.code }})</span></div>
+                        <div class="cell-sub">
+                            {{ o.reason or 'No reason given' }} &middot; {{ o.admin_name or 'an administrator' }}, {{ o.created_at | localtime('%d %b %Y') }}
+                        </div>
+                    </td>
+                    <td>{% if o.allowed %}<span class="badge badge-success">Allowed</span>{% else %}<span class="badge badge-danger">Denied</span>{% endif %}</td>
+                    <td class="actions">
+                        <form method="POST" action="{{ url_for('academic.student_override', user_id=user.id) }}">
+                            {{ ui.csrf() }}
+                            <input type="hidden" name="action" value="delete">
+                            <input type="hidden" name="id" value="{{ o.id }}">
+                            <button type="submit" class="btn btn-small btn-secondary">Remove</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+    <div class="card-foot">
+        {% if all_subjects %}
+        <form method="POST" action="{{ url_for('academic.student_override', user_id=user.id) }}">
+            {{ ui.csrf() }}
+            <input type="hidden" name="action" value="set">
+            <div class="form-row">
+                <div>
+                    <label for="override_subject">Subject</label>
+                    <select id="override_subject" name="subject_id" required>
+                        <option value="">Choose a subject</option>
+                        {% for s in all_subjects %}
+                        <option value="{{ s.id }}">{{ s.name }} ({{ s.code }}){% if not s.is_active %} - inactive{% endif %}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label for="override_allowed">Decision</label>
+                    <select id="override_allowed" name="allowed" required>
+                        <option value="1">Allow this student to take it</option>
+                        <option value="0">Deny this student</option>
+                    </select>
+                </div>
+            </div>
+            <label for="override_reason">Reason <span class="muted">(optional)</span></label>
+            <input type="text" id="override_reason" name="reason" maxlength="300" placeholder="e.g. Repeating the subject from last year">
+            <div class="form-actions">
+                <button type="submit" class="btn btn-secondary">Save exception</button>
+            </div>
+        </form>
+        {% else %}
+        <p class="hint">There are no subjects yet.</p>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+{% if user %}
+<div class="card">
+    <h3>Account tools</h3>
+    {% if user.role == 'student' and user.face_photo %}
+    <div class="profile-head" style="margin-top: 12px;">{{ ui.profile_photo(user) }}</div>
+    {% endif %}
+    <dl class="facts" style="margin: 12px 0 18px;">
+        <dt>Joined</dt><dd>{{ user.created_at | localtime }}</dd>
+        <dt>Password</dt><dd>{{ 'Temporary (must be changed at next login)' if user.must_change_password else 'Set by the user' }}</dd>
+        {% if user.role == 'student' %}
+        <dt>Face photo</dt><dd>{{ 'Registered' if user.face_encoding else 'Not registered' }}</dd>
+        {% endif %}
+    </dl>
+
+    <div class="form-actions">
+        {% if not is_self %}
+        <form method="POST" action="{{ url_for('admin_user_action', user_id=user.id) }}" data-confirm="Replace the password of {{ user.full_name }} with a new temporary one?">
+            {{ ui.csrf() }}
+            <input type="hidden" name="next" value="{{ request.path }}">
+            <input type="hidden" name="action" value="reset_password">
+            <button type="submit" class="btn btn-secondary">Reset password</button>
+        </form>
+        {% endif %}
+        {% if user.role == 'student' and user.face_encoding %}
+        <form method="POST" action="{{ url_for('admin_user_action', user_id=user.id) }}" data-confirm="Remove the face photo of {{ user.full_name }}? They must register a new one before checking in again.">
+            {{ ui.csrf() }}
+            <input type="hidden" name="next" value="{{ request.path }}">
+            <input type="hidden" name="action" value="reset_face">
+            <button type="submit" class="btn btn-secondary">Reset face photo</button>
+        </form>
+        {% endif %}
+        {% if user.role == 'student' %}
+        <a href="{{ url_for('report_student', student_id=user.id) }}" class="btn btn-secondary">Attendance report</a>
+        {% endif %}
+        {% if not is_self %}
+        <form method="POST" action="{{ url_for('admin_user_action', user_id=user.id) }}" data-confirm="Delete {{ user.full_name }} and all of their records? This cannot be undone.">
+            {{ ui.csrf() }}
+            <input type="hidden" name="action" value="delete">
+            <button type="submit" class="btn btn-danger">Delete user</button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/academic.js') }}"></script>
+<script>
+// Student ID and academic information only apply to students.
+const roleField = document.querySelector("select[name=role]");
+function syncStudentFields() {
+    const isStudent = roleField && roleField.value === "student";
+    document.querySelectorAll(".student-only").forEach((el) => el.classList.toggle("hidden-block", !isStudent));
+    document.getElementById("student_id").required = isStudent;
+}
+if (roleField) roleField.addEventListener("change", syncStudentFields);
+syncStudentFields();
+</script>
+{% endblock %}

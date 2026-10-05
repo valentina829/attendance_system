@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block title %}Academic structure{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h2>Academic structure</h2>
+        <p class="hint">Faculties, their programs, and the years of study. Open a program to set its years and specialisations.</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('academic.subjects') }}" class="btn btn-secondary">Subjects</a>
+    </div>
+</div>
+
+<div class="card">
+    <h3>Add a faculty</h3>
+    <form method="POST" action="{{ url_for('academic.faculty_action') }}" class="inline-form">
+        {{ ui.csrf() }}
+        <input type="hidden" name="action" value="add">
+        <input type="text" name="name" placeholder="e.g. Computer Science and Engineering" required maxlength="120" aria-label="Faculty name">
+        <button type="submit" class="btn btn-primary">Add faculty</button>
+    </form>
+</div>
+
+{% for f in faculties %}
+<div class="card card-flush" id="faculty-{{ f.id }}">
+    <div class="card-head">
+        <h3>{{ f.name }} {% if not f.is_active %}<span class="badge badge-muted">Inactive</span>{% endif %}</h3>
+        <div class="head-actions">
+            <form method="POST" action="{{ url_for('academic.faculty_action') }}" data-prompt="New name for this faculty" data-value="{{ f.name }}">
+                {{ ui.csrf() }}
+                <input type="hidden" name="id" value="{{ f.id }}">
+                <input type="hidden" name="action" value="rename">
+                <input type="hidden" name="name">
+                <button type="submit" class="btn btn-small btn-secondary">Rename</button>
+            </form>
+            <form method="POST" action="{{ url_for('academic.faculty_action') }}">
+                {{ ui.csrf() }}
+                <input type="hidden" name="id" value="{{ f.id }}">
+                <input type="hidden" name="action" value="toggle">
+                <button type="submit" class="btn btn-small btn-secondary">{{ 'Deactivate' if f.is_active else 'Activate' }}</button>
+            </form>
+            <form method="POST" action="{{ url_for('academic.faculty_action') }}" data-confirm="Delete the faculty '{{ f.name }}'?">
+                {{ ui.csrf() }}
+                <input type="hidden" name="id" value="{{ f.id }}">
+                <input type="hidden" name="action" value="delete">
+                <button type="submit" class="btn btn-small btn-danger">Delete</button>
+            </form>
+        </div>
+    </div>
+
+    {% if programs.get(f.id) %}
+    <div class="table-wrap">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Branch / program</th>
+                    <th class="num">Years</th>
+                    <th class="num">Specialisations</th>
+                    <th class="num">Students</th>
+                    <th>Status</th>
+                    <th class="actions"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in programs[f.id] %}
+                <tr>
+                    <td class="cell-main"><a href="{{ url_for('academic.program', program_id=p.id) }}">{{ p.name }}</a></td>
+                    <td class="num">{% if p.years %}{{ p.years }}{% else %}<span class="badge badge-warning">none set</span>{% endif %}</td>
+                    <td class="num">{{ p.specialisations }}</td>
+                    <td class="num">{{ p.students }}</td>
+                    <td>{{ ui.active_badge(p.is_active) }}</td>
+                    <td class="actions">
+                        <a href="{{ url_for('academic.program', program_id=p.id) }}" class="btn btn-small btn-secondary">Manage</a>
+                        <form method="POST" action="{{ url_for('academic.program_action') }}">
+                            {{ ui.csrf() }}
+                            <input type="hidden" name="id" value="{{ p.id }}">
+                            <input type="hidden" name="action" value="toggle">
+                            <button type="submit" class="btn btn-small btn-secondary">{{ 'Deactivate' if p.is_active else 'Activate' }}</button>
+                        </form>
+                        <form method="POST" action="{{ url_for('academic.program_action') }}" data-confirm="Delete the program '{{ p.name }}'?">
+                            {{ ui.csrf() }}
+                            <input type="hidden" name="id" value="{{ p.id }}">
+                            <input type="hidden" name="action" value="delete">
+                            <button type="submit" class="btn btn-small btn-danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="empty">This faculty has no programs yet.</p>
+    {% endif %}
+
+    <div class="card-foot">
+        <form method="POST" action="{{ url_for('academic.program_action') }}" class="inline-form">
+            {{ ui.csrf() }}
+            <input type="hidden" name="action" value="add">
+            <input type="hidden" name="faculty_id" value="{{ f.id }}">
+            <input type="text" name="name" placeholder="New branch / program in this faculty" required maxlength="120" aria-label="Program name">
+            <button type="submit" class="btn btn-secondary">Add program</button>
+        </form>
+    </div>
+</div>
+{% else %}
+<div class="card"><p class="empty">No faculties yet. Add the first one above.</p></div>
+{% endfor %}
+
+<div class="card card-flush" id="years">
+    <div class="card-head">
+        <h3>Years of study</h3>
+        <span class="hint">The years that exist. Each program chooses which of them it offers.</span>
+    </div>
+    <div class="table-wrap">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th class="num">No.</th>
+                    <th>Name</th>
+                    <th class="num">Programs</th>
+                    <th class="num">Students</th>
+                    <th>Status</th>
+                    <th class="actions"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for y in years %}
+                <tr>
+                    <td class="num">{{ y.number }}</td>
+                    <td class="cell-main">{{ y.name }}</td>
+                    <td class="num">{{ y.programs }}</td>
+                    <td class="num">{{ y.students }}</td>
+                    <td>{{ ui.active_badge(y.is_active) }}</td>
+                    <td class="actions">
+                        <form method="POST" action="{{ url_for('academic.year_action') }}" data-prompt="New name for this year of study" data-value="{{ y.name }}">
+                            {{ ui.csrf() }}
+                            <input type="hidden" name="id" value="{{ y.id }}">
+                            <input type="hidden" name="action" value="rename">
+                            <input type="hidden" name="name">
+                            <button type="submit" class="btn btn-small btn-secondary">Rename</button>
+                        </form>
+                        <form method="POST" action="{{ url_for('academic.year_action') }}">
+                            {{ ui.csrf() }}
+                            <input type="hidden" name="id" value="{{ y.id }}">
+                            <input type="hidden" name="action" value="toggle">
+                            <button type="submit" class="btn btn-small btn-secondary">{{ 'Deactivate' if y.is_active else 'Activate' }}</button>
+                        </form>
+                        <form method="POST" action="{{ url_for('academic.year_action') }}" data-confirm="Delete '{{ y.name }}'?">
+                            {{ ui.csrf() }}
+                            <input type="hidden" name="id" value="{{ y.id }}">
+                            <input type="hidden" name="action" value="delete">
+                            <button type="submit" class="btn btn-small btn-danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="6" class="empty">No years of study yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="card-foot">
+        <form method="POST" action="{{ url_for('academic.year_action') }}" class="inline-form">
+            {{ ui.csrf() }}
+            <input type="hidden" name="action" value="add">
+            <input type="number" name="number" min="1" max="20" placeholder="No." required class="input-narrow" aria-label="Year number">
+            <input type="text" name="name" placeholder="e.g. 5th Year" required maxlength="60" aria-label="Year name">
+            <button type="submit" class="btn btn-secondary">Add year</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

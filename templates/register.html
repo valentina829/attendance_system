@@ -1,52 +1,75 @@
 {% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
 {% block title %}Register{% endblock %}
 {% block content %}
-<div class="card form-card">
-    <h2>Create an account</h2>
+<div class="auth auth-wide">
+    <div class="card">
+        <h2>Create a student account</h2>
+        <p class="hint">Professor accounts are created by an administrator.</p>
 
-    <form id="register-form" method="POST" action="{{ url_for('register') }}">
-        <label for="full_name">Full name</label>
-        <input type="text" id="full_name" name="full_name" required>
-
-        <label for="email">Email</label>
-        <input type="email" id="email" name="email" required>
-
-        <label for="password">Password</label>
-        <input type="password" id="password" name="password" required minlength="6">
-
-        <label for="role">I am a</label>
-        <select id="role" name="role" required>
-            <option value="">-- select role --</option>
-            <option value="student">Student</option>
-            <option value="professor">Professor</option>
-        </select>
-
-        <div id="student-fields" class="hidden-block">
-            <label for="student_id">Student ID</label>
-            <input type="text" id="student_id" name="student_id">
-
-            <label>Face photo (required for face recognition check-in)</label>
-            <div class="camera-box">
-                <video id="reg-video" autoplay playsinline></video>
-                <canvas id="reg-canvas" class="hidden-block"></canvas>
-                <img id="reg-preview" class="hidden-block" alt="Captured face preview">
-            </div>
-            <div class="camera-controls">
-                <button type="button" id="start-camera-btn" class="btn btn-secondary">Start Camera</button>
-                <button type="button" id="capture-btn" class="btn btn-primary" disabled>Capture Photo</button>
-                <button type="button" id="retake-btn" class="btn btn-secondary hidden-block">Retake</button>
-            </div>
-            <p id="capture-status" class="hint"></p>
-            <input type="hidden" id="face_image" name="face_image">
+        {% if not domains or not tree %}
+        <div class="notice">
+            <p><strong>Registration is not open yet.</strong> The university has not finished setting up the system. Please try again later or contact an administrator.</p>
         </div>
+        {% else %}
+        <form id="face-form" method="POST" action="{{ url_for('register') }}">
+            {{ ui.csrf() }}
+            <div class="form-row">
+                <div>
+                    <label for="first_name">First name</label>
+                    <input type="text" id="first_name" name="first_name" value="{{ form.get('first_name', '') }}" required maxlength="60" autocomplete="given-name">
+                </div>
+                <div>
+                    <label for="last_name">Last name</label>
+                    <input type="text" id="last_name" name="last_name" value="{{ form.get('last_name', '') }}" required maxlength="60" autocomplete="family-name">
+                </div>
+            </div>
 
-        <button type="submit" class="btn btn-primary full-width">Register</button>
-    </form>
+            <div class="form-row">
+                <div>
+                    <label for="email">University email</label>
+                    <input type="email" id="email" name="email" value="{{ form.get('email', '') }}" required autocomplete="username" placeholder="name@{{ domains[0] }}">
+                </div>
+                <div>
+                    <label for="student_id">Student ID</label>
+                    <input type="text" id="student_id" name="student_id" value="{{ form.get('student_id', '') }}" required>
+                </div>
+            </div>
+            <p class="hint">Only {% for d in domains %}@{{ d }}{% if not loop.last %}, {% endif %}{% endfor %} addresses can register.</p>
 
-    <p class="switch-link">Already have an account? <a href="{{ url_for('login') }}">Login here</a></p>
+            <h4 class="form-heading">Your studies</h4>
+            {{ ui.academic_fields(tree, form, required=true, specialisation_hint='if you have one') }}
+
+            <h4 class="form-heading">Password</h4>
+
+            <div class="form-row">
+                <div>
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required minlength="8" autocomplete="new-password">
+                </div>
+                <div>
+                    <label for="confirm_password">Confirm password</label>
+                    <input type="password" id="confirm_password" name="confirm_password" required minlength="8" autocomplete="new-password">
+                </div>
+            </div>
+            <p class="hint">At least 8 characters.</p>
+
+            <h4 class="form-heading">Face photo</h4>
+            <p class="hint">Used to confirm it's really you at check-in. Face the camera, with good lighting and nobody else in the picture.</p>
+            {{ ui.face_capture() }}
+
+            <button type="submit" class="btn btn-primary full-width">Create account</button>
+        </form>
+        {% endif %}
+
+        <p class="switch-link">Already have an account? <a href="{{ url_for('login') }}">Log in</a></p>
+    </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
+{% if domains and tree %}
+<script src="{{ url_for('static', filename='js/academic.js') }}"></script>
 <script src="{{ url_for('static', filename='js/register.js') }}"></script>
+{% endif %}
 {% endblock %}
