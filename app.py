@@ -3,7 +3,7 @@ app.py
 ======
 Intelligent Student Attendance Management System
 using QR Code and Face Recognition.
-
+New Comment
 Main Flask application. Run with:  python app.py
 Then open:  https://127.0.0.1:5000
 
